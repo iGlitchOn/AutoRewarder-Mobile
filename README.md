@@ -1,386 +1,186 @@
-# AutoRewarder
+# AutoRewarder Mobile
 
-![Stars](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/safarsin/023d6f9c9aa602f6afbb7f5c1e2fe9ee/raw/stars.json)
+AutoRewarder Mobile acompaña a AutoRewarder PC cuando necesitas las funciones de teléfono de Microsoft Rewards. Se vincula por QR o código manual, recibe acciones del PC y devuelve el estado de la actividad.
 
-![Downloads](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/safarsin/023d6f9c9aa602f6afbb7f5c1e2fe9ee/raw/downloads.json)
+> Versión documentada: **4.3.5**<br>
+> Repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)
 
-An advanced, set-and-forget automation tool for Microsoft Rewards (supporting both the legacy and new dashboards). AutoRewarder performs Bing searches for PC and mobile point collection using a massive dataset of realistic queries (with optional, bring-your-own-key AI generation), completes Daily Sets and More Activities, includes Bing Visual Search tasks, and uses mathematically driven, human-like input simulation (W3C Actions, Bezier curves, smart scrolling and realistic keyboard typos).
+## Para qué sirve
 
-Built with a robust Python/Selenium backend, it offers two modes of operation: a sleek HTML/CSS/JS frontend wrapped in a native window via pywebview, and a headless runner (CLI) for scheduled background runs and automation scripts. Packaged as an executable Windows app (via Inno Setup) for a seamless, plug-and-play experience.
+La aplicación puede:
 
-> **Ready to start? Check out the complete [USER GUIDE](USER_GUIDE.md)**
+- Vincularse con AutoRewarder PC mediante QR o código manual.
+- Ejecutar búsquedas móviles solicitadas por el PC.
+- Iniciar o detener una ejecución remota.
+- Abrir Bing o Edge cuando el flujo lo necesita.
+- Solicitar check-in y noticias cuando Rewards los ofrece para la cuenta.
+- Mostrar el estado de la conexión y el progreso comunicado por el PC.
+- Consultar las releases de PC y móvil.
+- Descargar una actualización propia y abrir el instalador de Android.
 
----
+Bing y Rewards siguen siendo los servicios que deciden qué tareas existen y qué puntos se acreditan. Una tarea puede desaparecer aunque la aplicación esté bien vinculada.
 
-## Table of Contents
+## Requisitos
 
-### Getting Started
-- [Installation](#installation)
-- [Quick Start (For Users)](#quick-start-for-users)
-- [Development Setup (For Developers)](#development-setup-for-developers)
+- Android 8.0 o posterior, API 26 como mínimo.
+- AutoRewarder PC instalado y abierto.
+- Wi-Fi local para la vinculación normal.
+- Internet.
+- Cámara para escanear el QR, salvo que uses el código manual.
+- Bing instalado si vas a usar los botones que lo abren directamente.
 
-### Product Overview
-- [Screenshots & Demo](#screenshots--demo)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [System Requirements](#system-requirements)
-- [CLI Usage](#cli-usage)
-- [Build & Distribution](#build--distribution)
+## Descargar e instalar
 
-### Reference
-- [Project Structure](#project-structure)
-- [Runtime Data](#runtime-data)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-- [Disclaimer](#disclaimer)
-- [Contact](#contact)
-- [Support](#support)
+1. Abre [Releases de AutoRewarder Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile/releases).
+2. Descarga `AutoRewarder-Mobile-X.Y.Z.apk` desde una release oficial.
+3. Abre el archivo desde **Descargas**.
+4. Si Android lo solicita, entra en Ajustes y activa **Permitir desde esta fuente** solo para el navegador o gestor de archivos que usaste.
+5. Regresa al instalador y confirma.
+6. Mantén Play Protect activo y acepta el análisis si Android lo ofrece.
+7. Abre AutoRewarder Mobile.
 
----
+El APK se distribuye fuera de Google Play, así que Android puede mostrar una advertencia o pedir autorización para instalarlo desde esa fuente. No desactives Play Protect de manera global ni instales copias de origen desconocido.
 
-## Installation
+## Permisos
 
-**Easy Way (Recommended):**
-Download `AutoRewarder-Setup.exe` from the [latest release](https://github.com/safarsin/AutoRewarder/releases/latest) and run it. The installer will verify all dependencies and install the app for you.
+### Cámara
 
-**Portable Way:**
-Download `AutoRewarder.zip` from the [latest release](https://github.com/safarsin/AutoRewarder/releases/latest) and extract it to any folder (e.g., a USB drive). Run the executable. All your settings and profiles will be saved locally inside the `config` folder.
-> **Note:** Because the portable version is a single-file build, it may take a few seconds longer to start up compared to the installed version while it unpacks core components. Once open, it works at full speed.
+Se usa para leer el QR de vinculación. Android solicita este permiso al pulsar **Scan QR**.
 
-**Manual Way (Source):**
-See the [Development Setup](#development-setup-for-developers) section.
+### Red
 
----
+Internet, el estado de red y la información Wi-Fi permiten hablar con el PC, descubrirlo en la red local y consultar releases.
 
-## Screenshots & Demo
+### Instalación de actualizaciones
 
-| Perform Searches | App Demo |
-| :---: | :---: |
-|<img src="assets/screenshots/perform_demo.gif">|<img src="assets/screenshots/app_demo_v4.1.gif">|
+`REQUEST_INSTALL_PACKAGES` solo permite abrir el instalador de Android para un APK descargado. Android y el usuario deben confirmar la instalación final. La aplicación no instala actualizaciones en silencio.
 
-| Daily Sets (New Dashboard) & Claim action | Tab Switching |
-| :---: | :---: |
-|<img src="assets/screenshots/daily_sets_demo_v4.0.gif">|<img src="assets/screenshots/tab_perform.gif">|
+La aplicación no solicita contactos, ubicación, micrófono, SMS ni almacenamiento amplio.
 
-| Visual Search |
-| :---: |
-|<img src="assets/screenshots/visual_search_demo_v4.2.gif">|
+## Vinculación por QR
 
-<details>
-  <summary><b>View Legacy Dashboard Demo (click to expand)</b></summary>
+### En el PC
 
-  <br>
+1. Abre AutoRewarder PC.
+2. Selecciona la cuenta correcta.
+3. Ve a **Account > Vincular un celular**.
+4. Deja el QR visible en la pantalla.
 
-  | Daily Sets (Legacy Dashboard) |
-  | :---: |
-  |<img src="assets/screenshots/daily_set.gif">|
+### En el teléfono
 
-</details>
+1. Abre AutoRewarder Mobile.
+2. Pulsa **Scan QR**.
+3. Acepta la cámara.
+4. Apunta al QR completo y espera la confirmación.
 
-> <sub>*Demo is sped up for viewing purposes. Actual execution includes randomized delays and pauses to mimic human behavior.*</sub>
+La cámara conserva la proporción de la imagen para que el código no se vea estirado. Si no enfoca, prueba el código manual:
 
-| Main Window & Account Management | Settings |
-| :---: | :---: |
-| <img src="assets/screenshots/main_window_v4.0.jpg"> | <img src="assets/screenshots/settings_1_v4.1.jpg"> |
-| <img src="assets/screenshots/account_management_v4.0.jpg"> | <img src="assets/screenshots/settings_2_v4.1.jpg"> |
+1. Pulsa **Manual code**.
+2. Escribe el código que muestra el PC.
+3. Pulsa **Pair**.
 
-| History | Statistics Dashboard |
-| :---: | :---: |
-| <img src="assets/screenshots/history_window.png"> | <img src="assets/screenshots/stats_v4.0.jpg"> |
+## Botones principales
 
----
+### Conexión
 
-## Tech Stack
+- **Scan QR** abre el lector de cámara.
+- **Manual code** permite vincular sin cámara.
+- **Pair** confirma el código escrito.
+- **Unlink phone** elimina la relación con el PC.
 
-| Layer | Technology |
-|-------|------------|
-| Backend | Python 3.12, [selenium](https://www.selenium.dev/), [pywebview](https://pywebview.flowrl.com/), pystray, Pillow, [nlpaug](https://github.com/makcedward/nlpaug/tree/master) |
-| Frontend | HTML, CSS, JavaScript |
-| Bridge | pywebview JS API (pywebview.api) |
-| Build | [PyInstaller](https://pyinstaller.org/), [Inno Setup](https://jrsoftware.org/isinfo.php) |
+### Actividad
 
----
+- **Check-in** solicita el check-in si está disponible.
+- **News** solicita la actividad de noticias si Rewards la muestra.
+- **Install Bing / Login Bing** abre el flujo correspondiente.
+- **Start searches** inicia las búsquedas móviles configuradas.
+- **Stop** detiene la ejecución activa sin desvincular el teléfono.
 
-## System Requirements
+### Control del PC
 
-- **OS**: Windows 10 or later (installer), or Linux via source setup (no prebuilt executable)
-- **Browser**: Microsoft Edge (driver managed by Selenium Manager)
-- **.NET Framework**: 4.8 or higher (automatically checked by installer)
-- **RAM**: Minimum 512 MB (1 GB recommended)
-- **Disk Space**: ~100 MB
+- **Start PC** solicita una ejecución en el PC.
+- **Tasks only** solicita únicamente las tareas diarias.
+- **Open Edge** abre Edge en el PC si el puente está conectado.
+- **Check updates** consulta las releases de ambos repositorios.
+- **Download** descarga una actualización propia.
+- **Cancel** cierra el diálogo sin cambiar la instalación.
 
----
+Un botón puede quedar deshabilitado si no hay teléfono vinculado, el PC está apagado, la cuenta no está disponible o la tarea ya terminó. En ese caso la interfaz evita enviar una acción que no tiene dónde ejecutarse.
 
-## Features
+## Primera prueba
 
-**User Experience & Interface:**
-- Multi-account management (add, rename, delete, per-account profiles)
-- First Setup per account with a dedicated Edge profile
-- PC and Mobile query controls (0-130 / 0-99)
-- Optional hide-browser mode (headless UI toggle)
-- Close-to-tray behavior with a tray menu (reopen or exit)
-- Per-account scheduled runs (simple or advanced)
-- Start with Windows/Linux toggle (autostart)
-- Live terminal-like logs with update notifications (GitHub Releases)
-- Local history view per account (date, time, query, status)
-- Statistics dashboard: real scraped points balance, per-run earnings, lifetime activity counters, and a multi-account recap
-- Safe recovery for corrupted settings/history files
-- Detailed analytics window (lifetime counters, real balances, per-day activity charts)
-- Compact stats UI (total points and last run earnings card on main window)
+1. Conecta PC y teléfono a la misma Wi-Fi.
+2. Vincula el teléfono.
+3. Comprueba que la cuenta es la misma en ambos lados.
+4. Ejecuta pocas búsquedas con el navegador visible.
+5. Revisa el estado en PC y móvil.
+6. Usa **Stop** para detener la sesión manualmente.
 
-**Automation & Core Logic:**
-- OS-level daily autostart (launches headless runs at per-account scheduled times)
-- Configurable run pacing (advanced scheduling with run duration and queries per hour)
-- Background WebDriver warmup at startup for faster execution
-- Human-like search behavior (typing delays, random pauses, smooth scrolling)
-- Visual Search integration for Bing tasks in both daily-task and standard workflows
-- Hash-bypass architecture that generates a large pool of image variants to avoid file-hash checks
-- Mobile emulation for Rewards credit (iPhone UA and touch)
-- Uses real-world queries from assets/queries.json (8154 unique entries from google-trends dataset)
-- Randomized delays to reduce repetitive patterns
-- Optional tab switching between result categories (Images/Videos/News)
-- Natural mouse movement/clicking (W3C Actions/randomized Bezier trajectories)
-- Daily Set task collection (runs once per day, per account)
-- Separate browser profile per account
-- AI-generated search queries in your language (bring-your-own-key LLM)
-- Localization detection (language, region)
-- Simulated human typos in search queries (via nlpaug)
-- Smart dashboard selection (automatic detection and switching between legacy and new versions at runtime)
+No cierres la aplicación mientras espera respuesta del PC. Si la cerraste, vuelve a abrirla y comprueba el estado antes de iniciar otra sesión.
 
-**Developer & Code Quality:**
-- Advanced documentation (comprehensive docstrings and detailed guides)
-- Strict code formatting and static type checking (Black, Flake8, MyPy)
+## Actualizaciones
 
----
+La aplicación consulta:
 
-## Quick Start (For Users)
+- [AutoRewarder-Mobile Releases](https://github.com/iGlitchOn/AutoRewarder-Mobile/releases)
+- [AutoRewarder-PC Releases](https://github.com/iGlitchOn/AutoRewarder-PC/releases)
 
-You do not need Python to use release builds.
+Solo las releases propias se pueden descargar desde el botón de actualización. Las versiones del repositorio original se notifican como referencia y no se instalan automáticamente.
 
-1. Download `AutoRewarder-Setup.exe` from the latest release
-2. Install and run the app
-3. Add your first account and complete setup
-4. Set PC/Mobile counts and start a run
+Para actualizar:
 
-> **Tip:** Closing the main window sends AutoRewarder to the system tray. Use the tray icon to reopen the window or choose **Exit** to fully close the app.
+1. Pulsa **Check updates**.
+2. Revisa la versión encontrada.
+3. Pulsa **Download** o **Cancel**.
+4. Espera a que termine la descarga.
+5. Acepta el instalador de Android.
+6. Si Android vuelve a pedir autorización para esa fuente, comprueba que reconoces el archivo antes de aceptarla.
 
-For detailed guide, see [USER_GUIDE.md](USER_GUIDE.md)
+## Si algo falla
 
----
+### No aparece el PC
 
-## Development Setup (For Developers)
+Comprueba que ambos dispositivos estén en la misma red. Desactiva temporalmente VPN o red de invitados, revisa Windows Firewall y prueba el código manual.
 
-1. Clone the repository.
-2. Create and activate a virtual environment.
-3. Install dependencies.
-4. Run the app.
+### El QR no se lee
 
-```bash
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python AutoRewarder.py
-```
----
+Limpia la cámara, sube el brillo del monitor, evita reflejos, encuadra el código completo y prueba a acercar o alejar lentamente el teléfono.
 
-## CLI Usage
+### Check-in o noticias no funcionan
 
-For users who prefer the terminal or want to integrate the bot into custom scripts, a headless runner is available. It is the same engine used by the Start with Windows setting. You can call `AutoRewarder.py --headless` or run `AutoRewarder_CLI.py` directly (arguments are the same).
+Estas acciones dependen de que Microsoft las ofrezca para la cuenta y de que el teléfono siga conectado. La aplicación no puede crear una actividad que Rewards no muestra.
 
-### Available CLI Arguments
+### Bing no inicia sesión
 
-These arguments can be combined. Without `--account`, it runs every enabled schedule sequentially.
+Abre Bing manualmente, inicia sesión en la cuenta correcta y vuelve a AutoRewarder Mobile.
 
-| Argument | Type | Description | Default / Fallback |
-| :--- | :--- | :--- | :--- |
-| `--account` | String | Run only this account (by id or label). | Runs all enabled schedules. |
-| `--pc` | Integer | Override PC queries for this run (requires `--account`). | Uses the account schedule. |
-| `--mobile` | Integer | Override Mobile queries for this run (requires `--account`). | Uses the account schedule. |
-| `--force` | Flag | Run even if already triggered today. | Skips accounts already triggered today. |
+### Se desvinculó el teléfono
 
-> **Note:** Headless mode is forced in the CLI and does not change the GUI Hide Browser preference.
+La cuenta del PC debe conservarse. En el PC confirma la cuenta activa y revisa el estado de la ejecución. Check-in y noticias pueden requerir volver a vincular el teléfono.
 
----
+## Compilación
 
-### Example CLI commands:
+El proyecto Android usa Gradle. Desde la carpeta `android`:
 
-```bash
-# Run every enabled schedule (same as autostart)
-python AutoRewarder.py --headless
-
-# Run a single account once with overrides
-python AutoRewarder.py --headless --account "Main" --pc 30 --mobile 20
-
-# Force a re-run the same day
-python AutoRewarder.py --headless --account "Main" --pc 30 --force
+```powershell
+.\gradlew.bat assembleRelease
 ```
 
----
+La compilación copia desde `gui/` los archivos de la interfaz móvil. Para firmar un APK de release necesitas un `keystore.properties` local. No subas contraseñas, keystores ni archivos de firma.
 
-## Build & Distribution
+## Seguridad y privacidad
 
-**Build EXE (for installer creation):**
-```bash
-.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean AutoRewarder.spec
-```
+- No compartas QR, códigos manuales, perfiles de Edge ni capturas con sesiones abiertas.
+- Mantén Android, Windows, Edge y Bing actualizados.
+- Revisa los permisos desde Ajustes de Android.
+- Descarga solo desde los repositorios oficiales.
 
-**Create Windows Installer:**
-```bash
-"C:\Program Files (x86)\Inno Setup 6\iscc.exe" AutoRewarder.iss
-```
-Or use the Inno Setup IDE to open `AutoRewarder.iss` and compile it.
-Output: `dist/AutoRewarder-Setup.exe`
+## Aviso
 
----
+AutoRewarder interactúa con servicios de terceros. Microsoft puede cambiar Rewards, limitar funciones o restringir la automatización según sus términos. El usuario es responsable de su cuenta y del uso de la aplicación.
 
-## Project Structure
+## Reportar un problema
 
-```text
-AutoRewarder/
-├── gui/
-│   ├── index.html             # Main window UI
-│   ├── history.html           # History view UI
-│   ├── history.css            # History view styling
-│   ├── dashboard.html         # Statistics dashboard UI
-│   ├── dashboard.css          # Statistics dashboard styling
-│   ├── script.js              # Frontend logic and bridge calls
-│   ├── settings.js            # Settings page logic and bridge calls
-│   ├── styles.css             # App styling
-│   └── normalize.css          # CSS reset
-├── assets/
-│   ├── icon.ico               # App icon
-│   ├── queries.json           # Queries list (8154 unique queries)
-│   ├── visual_search_assets/  # Visual search assets
-│   └── screenshots/           # Screenshots and GIFs for documentation
-├── src/
-│   ├── __init__.py            # Python package initialization
-│   ├── api.py                 # Centralizes all main operations (bridge API exposed to JS)
-│   ├── config.py              # Configuration constants/platform and file paths
-│   ├── utils.py               # Utility functions (human typing, update checks)
-│   ├── accounts/              # Multi-account management
-│   │   ├── manager.py         # Account CRUD + current account selection
-│   │   ├── meta.py            # Per-account metadata (first_setup_done, schedule)
-│   │   └── settings.py        # App-wide settings (hide_browser, autostart)
-│   ├── emulator/              # Selenium browser + human-like input
-│   │   ├── driver.py          # Edge WebDriver setup
-│   │   ├── human.py           # Human-like mouse / touch / scrolling
-│   │   └── edge_policy.py     # Windows-only Edge auto-signin opt-out
-│   ├── search/                # Bing query execution + history
-│   │   ├── engine.py          # Search loop with human-like delays/Visual Search
-│   │   ├── history.py         # Per-account search history JSON
-│   │   ├── llm.py             # LLM-based query generation
-│   │   └── locale.py          # Localization detection (language, region)
-│   ├── dailytasks/            # Rewards daily-set + more-activities automation
-│   │   ├── runner.py          # DailySet orchestrator + status persistence
-│   │   ├── new_dashboard.py   # The New Dashboard support
-│   │   ├── card.py            # RewardsCard: DOM checks + click + tab dance
-│   │   └── card_js.py         # JS heuristics + CardStatus enum
-│   └── stats/                 # Per-account statistics
-│       └── manager.py         # StatsManager + points-balance scraper
-├── AutoRewarder.py            # Python backend and webview window
-├── AutoRewarder_CLI.py        # Headless runner (multi-account aware)
-├── AutoRewarder.spec          # PyInstaller build spec
-├── AutoRewarder.iss           # Inno Setup installer script
-├── .pre-commit-config.yaml    # Pre-commit hooks configuration
-├── requirements.txt           # Production dependencies
-├── requirements-dev.txt       # Development & testing dependencies
-├── LICENSE                    # MIT License
-├── USER_GUIDE.md              # End-user documentation
-└── README.md                  # Project overview and developer setup
-```
+Incluye la versión, modelo y versión de Android, versión de AutoRewarder PC, tipo de conexión y el paso que falló. No incluyas contraseñas, tokens, QR ni perfiles de navegador.
 
----
-
-## Runtime Data
-
-The application stores its runtime files (profiles, history, logs, and settings) in a dedicated folder separate from your main browser.
-
-**On Windows:**
-```text
-%USERPROFILE%\AppData\Local\AutoRewarder
-```
-
-**On Linux:**
-```text
-~/.local/share/AutoRewarder
-```
-
-Created files and folders:
-```text
-settings.json      # Global settings (hide_browser, current_account_id, autoStartUp etc.)
-accounts.json      # Account index
-accounts/
-	<account_id>/
-		EdgeProfile/   # Separate Edge profile for WebDriver
-		history.json   # Search history (date, time, query, status)
-		status.json    # Daily Set/Visual Search completion status (per-day)
-		stats.json     # Statistics: scraped points balance + activity counters
-		meta.json      # Per-account metadata (first_setup_done, schedule)
-background_log.txt # Logs from the background runner (for debugging)
-```
-
----
-
-## Troubleshooting
-
-For common issues and solutions, see the [Troubleshooting](USER_GUIDE.md#troubleshooting) section in the USER GUIDE.
-
----
-
-## Roadmap
-
-- [x] Windows installer with dependency checking (Inno Setup)
-- [x] Action Chains Selenium/W3C Actions for more natural mouse movement and clicks
-- [x] Daily Set collector
-- [x] Refactor: split monolith to src modules
-- [x] Update checks (GitHub Releases API)
-- [x] Better randomized scrolling (unique speed/length per session)
-- [x] Advanced "coffee" breaks during long sessions
-- [x] Navigation flow: sometimes switch result tabs (Images/Videos/News)
-- [x] Script-only version (CLI tool without GUI)
-- [x] Automatic start-up
-- [x] Query pacing over a specified duration (rate-based scheduling)
-- [x] Multi-account support (manage multiple Rewards accounts)
-- [x] Mobile support
-- [x] Per-Account Scheduling
-- [x] Brand New UI
-- [x] System tray (close-to-tray)
-- [x] Hide browser mode (headless UI)
-- [x] Statistics dashboard (points tracking, session summaries)
-- [x] Daily "Claim" actions
-- [x] The New Dashboard Support
-- [x] AI-generated search queries in your language (bring-your-own-key LLM)
-- [x] Simulated human typos in search queries (via nlpaug)
-- [x] Visual search integration
-- [ ] View background logs directly in the UI
-- [ ] Custom OpenAI compatible endpoints
-- [ ] Human typos simulation for different keyboard/language layouts (AZERTY, QWERTZ, etc.)
-- [ ] Human-like typing with random spaces/backspaces
-- [ ] Per-account proxy support
-- [ ] Explore on Bing support
-- [ ] Run all accounts feature
-- [ ] Region-specific search query datasets (US, UK, CA, AU, IN, etc.)
-- [ ] Browser choice (Chrome, Firefox support in addition to Edge)
-- [ ] Keyboard shortcuts
-
----
-
-## Disclaimer
-
-Using automation against third-party services may violate their Terms of Service.
-You are responsible for your own usage.
-
----
-
-## Contact
-
-- **[Issues](https://github.com/safarsin/AutoRewarder/issues)** — for bug reports and errors.
-- **[Discussions](https://github.com/safarsin/AutoRewarder/discussions)** — for questions, ideas, and general help.
-
----
-
-## Support
-
-If you found this project helpful and would like to support it, you can buy me a coffee here:
-
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/safarsin)
+Reporta errores en [Issues de AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile/issues).
