@@ -164,7 +164,7 @@ public class MainActivity extends Activity {
 
     void installApk(File apk) {
         runOnUiThread(() -> {
-            if (apk == null || !apk.isFile()) {
+            if (apk == null || !apk.isFile() || apk.length() < 100) {
                 onUpdateFailed("APK no descargado.");
                 return;
             }

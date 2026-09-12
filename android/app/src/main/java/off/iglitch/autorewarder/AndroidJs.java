@@ -40,6 +40,7 @@ public class AndroidJs {
     private final SharedPreferences prefs;
     private final ExecutorService io = Executors.newCachedThreadPool();
     private volatile boolean discovering = false;
+    private final AtomicBoolean downloadCancel = new AtomicBoolean(false);
 
     public AndroidJs(MainActivity activity, WebView webView) {
         this.activity = activity;
@@ -148,8 +149,18 @@ public class AndroidJs {
     }
 
     @JavascriptInterface
+    public void cancelDownloadUpdate() {
+        downloadCancel.set(true);
+    }
+
+    @JavascriptInterface
     public void downloadUpdate(String url) {
-        if (url == null || url.isEmpty()) return;
+        if (url == null || url.trim().isEmpty()) {
+            activity.onUpdateFailed("No hay un APK para descargar.");
+            return;
+        }
+        downloadCancel.set(false);
+        final String sourceUrl = url.trim();
         io.execute(() -> {
             File dir = new File(activity.getFilesDir(), "updates");
             if (!dir.exists() && !dir.mkdirs()) {
@@ -159,7 +170,7 @@ public class AndroidJs {
             File apk = new File(dir, "AutoRewarder.apk");
             HttpURLConnection conn = null;
             try {
-                conn = (HttpURLConnection) new URL(url).openConnection();
+                conn = (HttpURLConnection) new URL(sourceUrl).openConnection();
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(120000);
                 conn.setInstanceFollowRedirects(true);
@@ -167,24 +178,68 @@ public class AndroidJs {
                 conn.setRequestProperty("User-Agent", "AutoRewarder-Phone");
                 int code = conn.getResponseCode();
                 if (code >= 400) {
-                    activity.onUpdateFailed("El PC no sirvió el APK (" + code + ").");
+                    boolean github = sourceUrl.contains("github.com")
+                            || sourceUrl.contains("githubusercontent.com");
+                    String who = github ? "GitHub no sirvió el APK" : "El PC no sirvió el APK";
+                    activity.onUpdateFailed(who + " (" + code + ").");
                     return;
                 }
+                long expected = conn.getContentLengthLong();
+                long written = 0;
+                boolean cancelled = false;
                 try (InputStream in = conn.getInputStream();
                      FileOutputStream out = new FileOutputStream(apk)) {
                     byte[] buf = new byte[64 * 1024];
                     int n;
-                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
-                    out.getFD().sync();
+                    while ((n = in.read(buf)) > 0) {
+                        if (downloadCancel.get()) {
+                            cancelled = true;
+                            break;
+                        }
+                        written += n;
+                        out.write(buf, 0, n);
+                    }
+                    if (!cancelled) out.getFD().sync();
+                }
+                if (cancelled) {
+                    //noinspection ResultOfMethodCallIgnored
+                    apk.delete();
+                    activity.onUpdateFailed("Descarga cancelada.");
+                    return;
+                }
+                if (expected > 0 && written != expected) {
+                    //noinspection ResultOfMethodCallIgnored
+                    apk.delete();
+                    activity.onUpdateFailed("Descarga incompleta (" + written + "/" + expected + ").");
+                    return;
+                }
+                if (written < 100 || !isZipApk(apk)) {
+                    //noinspection ResultOfMethodCallIgnored
+                    apk.delete();
+                    activity.onUpdateFailed("El archivo descargado no es un APK válido.");
+                    return;
                 }
                 activity.installApk(apk);
             } catch (Exception e) {
+                //noinspection ResultOfMethodCallIgnored
+                apk.delete();
                 String msg = e.getMessage() == null ? "error" : e.getMessage();
                 activity.onUpdateFailed("Descarga falló: " + msg);
             } finally {
                 if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    private static boolean isZipApk(File apk) {
+        try (FileInputStream in = new FileInputStream(apk)) {
+            byte[] mag = new byte[4];
+            if (in.read(mag) != 4) return false;
+            return mag[0] == 0x50 && mag[1] == 0x4B
+                    && (mag[2] == 0x03 || mag[2] == 0x05 || mag[2] == 0x07);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @JavascriptInterface
