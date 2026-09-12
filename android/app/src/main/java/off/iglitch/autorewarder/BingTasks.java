@@ -3,6 +3,7 @@ package off.iglitch.autorewarder;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.CookieManager;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -105,6 +106,7 @@ final class BingTasks {
     private final List<String> newsHrefs = new ArrayList<>();
     private int newsIndex = 0;
     private boolean running = false;
+    private static final int TASK_DEADLINE_MS = 90000;
 
     BingTasks(MainActivity activity, WebView bing) {
         this.activity = activity;
@@ -133,6 +135,12 @@ final class BingTasks {
             public void onPageFinished(WebView view, String url) {
                 onLoaded(url);
             }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (running) finish(false, "WebView de Bing se cerró.");
+                return true;
+            }
         });
     }
 
@@ -143,6 +151,10 @@ final class BingTasks {
         this.newsHrefs.clear();
         this.newsIndex = 0;
         this.running = true;
+        handler.removeCallbacksAndMessages(null);
+        handler.postDelayed(() -> {
+            if (running) finish(false, "Bing no respondió a tiempo.");
+        }, TASK_DEADLINE_MS);
         if ("news".equals(this.kind)) {
             activity.setBingStatus("Abriendo noticias Bing…");
             bing.loadUrl(NEWS_URL);

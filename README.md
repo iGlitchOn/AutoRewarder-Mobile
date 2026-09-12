@@ -2,7 +2,7 @@
 
 AutoRewarder Mobile acompaña a AutoRewarder PC cuando necesitas las funciones de teléfono de Microsoft Rewards. Se vincula por QR o código manual, recibe acciones del PC y devuelve el estado de la actividad.
 
-> Versión documentada: **4.3.10**<br>
+> Versión documentada: **4.3.11**<br>
 > Este repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)<br>
 > Compañero del fork [iGlitchOn/AutoRewarder-PC](https://github.com/iGlitchOn/AutoRewarder-PC)<br>
 > Proyecto original: [safarsin/AutoRewarder](https://github.com/safarsin/AutoRewarder)

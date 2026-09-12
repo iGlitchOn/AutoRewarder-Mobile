@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -61,6 +62,16 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 view.evaluateJavascript("window.onNativeReady && onNativeReady()", null);
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                try {
+                    view.loadUrl("file:///android_asset/www/phone.html");
+                } catch (Exception e) {
+                    view.reload();
+                }
+                return true;
             }
         });
         ui.loadUrl("file:///android_asset/www/phone.html");
