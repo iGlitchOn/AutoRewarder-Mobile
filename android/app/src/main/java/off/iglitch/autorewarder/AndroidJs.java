@@ -18,6 +18,7 @@ import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -408,10 +409,20 @@ public class AndroidJs {
         }
         DatagramSocket socket = null;
         try {
-            socket = new DatagramSocket(38472);
-            socket.setBroadcast(true);
-            socket.setReuseAddress(true);
-            socket.setSoTimeout(1500);
+            while (discovering && socket == null) {
+                try {
+                    DatagramSocket candidate = new DatagramSocket(null);
+                    candidate.setReuseAddress(true);
+                    candidate.bind(new InetSocketAddress(38472));
+                    candidate.setBroadcast(true);
+                    candidate.setSoTimeout(1500);
+                    socket = candidate;
+                } catch (Exception bindErr) {
+                    android.util.Log.w("AutoRewarder", "beacon bind failed", bindErr);
+                    try { Thread.sleep(5000); } catch (Exception ignored) {}
+                }
+            }
+            if (socket == null) return;
             byte[] buf = new byte[1024];
             while (discovering) {
                 DatagramPacket packet = new DatagramPacket(buf, buf.length);
@@ -427,7 +438,8 @@ public class AndroidJs {
                         "window.onBeaconRaw && onBeaconRaw(" + json(raw) + ")",
                         null));
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            android.util.Log.w("AutoRewarder", "beacon listen failed", e);
         } finally {
             discovering = false;
             if (socket != null) socket.close();
@@ -521,7 +533,6 @@ public class AndroidJs {
     }
 
     private static String json(String value) {
-        if (value == null) return "\"\"";
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+        return JSONObject.quote(value == null ? "" : value);
     }
 }
