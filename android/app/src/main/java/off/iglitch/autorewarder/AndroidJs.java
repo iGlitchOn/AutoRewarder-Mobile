@@ -304,7 +304,10 @@ public class AndroidJs {
             conn.setReadTimeout(15000);
             conn.setInstanceFollowRedirects(true);
             conn.setRequestMethod(method == null ? "GET" : method.toUpperCase());
-            conn.setRequestProperty("Accept", "application/json");
+            boolean github = url != null && url.contains("api.github.com");
+            conn.setRequestProperty(
+                    "Accept",
+                    github ? "application/vnd.github+json" : "application/json");
             conn.setRequestProperty("User-Agent", "AutoRewarder-Phone");
             if (token != null && !token.isEmpty()) {
                 conn.setRequestProperty("Authorization", "Bearer " + token);
