@@ -2,8 +2,24 @@
 
 AutoRewarder Mobile acompaña a AutoRewarder PC cuando necesitas las funciones de teléfono de Microsoft Rewards. Se vincula por QR o código manual, recibe acciones del PC y devuelve el estado de la actividad.
 
-> Versión documentada: **4.3.5**<br>
-> Repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)
+> Versión documentada: **4.3.6**<br>
+> Este repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)<br>
+> Compañero del fork [iGlitchOn/AutoRewarder-PC](https://github.com/iGlitchOn/AutoRewarder-PC)<br>
+> Proyecto original: [safarsin/AutoRewarder](https://github.com/safarsin/AutoRewarder)
+
+## Origen
+
+AutoRewarder PC es un **fork** de [safarsin/AutoRewarder](https://github.com/safarsin/AutoRewarder). El original emula el móvil dentro de Edge; **no incluye una app Android**.
+
+Este repositorio es código propio de la distribución iGlitchOn: una app nativa que se vincula con [AutoRewarder-PC](https://github.com/iGlitchOn/AutoRewarder-PC) y ejecuta en el teléfono las acciones que Rewards pide en dispositivo móvil.
+
+### Cambios propios (esta app no existe en el original)
+
+- App Android nativa (`off.iglitch.autorewarder`) con WebView de la interfaz `phone.html`.
+- Vinculación con el PC por QR o código manual (`QrScanActivity`).
+- Puente JS–Android (`AndroidJs`) para cámara, Bing, instalación de APK y estado de red.
+- Check-in, noticias y búsquedas móviles pedidas por el PC (`BingTasks`, `BingLauncher`).
+- Consulta de releases de PC y móvil; descarga e instalación solo de APK propios. Las versiones de `safarsin/AutoRewarder` se notifican y no se instalan.
 
 ## Para qué sirve
 
