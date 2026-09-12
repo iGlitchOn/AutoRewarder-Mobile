@@ -32,6 +32,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.json.JSONObject;
+
 public class AndroidJs {
     private final MainActivity activity;
     private final WebView webView;
@@ -268,7 +270,13 @@ public class AndroidJs {
             if (text == null || text.isEmpty()) {
                 return "{\"ok\":false,\"status\":" + code + ",\"error\":\"empty\"}";
             }
-            return text;
+            try {
+                JSONObject obj = new JSONObject(text);
+                if (!obj.has("status")) obj.put("status", code);
+                return obj.toString();
+            } catch (Exception ignore) {
+                return text;
+            }
         } catch (Exception e) {
             String msg = e.getMessage() == null ? "error" : e.getMessage().replace("\"", "'");
             return "{\"ok\":false,\"error\":\"" + msg + "\"}";
