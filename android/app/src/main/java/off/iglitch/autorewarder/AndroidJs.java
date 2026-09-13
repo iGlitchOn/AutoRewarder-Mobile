@@ -432,7 +432,7 @@ public class AndroidJs {
                     continue;
                 }
                 String msg = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8).trim();
-                if (!msg.startsWith("AR1|") && !msg.startsWith("AR2|")) continue;
+                if (!msg.matches("^AR\\d+\\|.*")) continue;
                 final String raw = msg;
                 activity.runOnUiThread(() -> webView.evaluateJavascript(
                         "window.onBeaconRaw && onBeaconRaw(" + json(raw) + ")",
