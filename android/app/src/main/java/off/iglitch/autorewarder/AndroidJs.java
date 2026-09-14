@@ -47,6 +47,33 @@ public class AndroidJs {
         this.activity = activity;
         this.webView = webView;
         this.prefs = activity.getSharedPreferences("autorewarder", Context.MODE_PRIVATE);
+        io.execute(this::pulseLoop);
+    }
+
+    private void pulseLoop() {
+        while (!io.isShutdown()) {
+            try {
+                pulseMe();
+            } catch (Exception ignored) {}
+            try {
+                Thread.sleep(30_000);
+            } catch (InterruptedException e) {
+                return;
+            }
+        }
+    }
+
+    private void pulseMe() {
+        String raw = loadPairing();
+        String token = jsonField(raw, "token");
+        if (token.isEmpty()) return;
+        String[] urls = new String[] { jsonField(raw, "lan"), jsonField(raw, "base") };
+        for (String url : urls) {
+            if (url == null || url.isEmpty()) continue;
+            String base = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+            String resp = http("GET", base + "/me", "", token);
+            if (resp != null && resp.contains("\"ok\":true")) return;
+        }
     }
 
     @JavascriptInterface
