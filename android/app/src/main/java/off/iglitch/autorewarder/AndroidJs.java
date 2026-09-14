@@ -2,6 +2,9 @@ package off.iglitch.autorewarder;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.provider.Settings;
@@ -24,6 +27,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
@@ -183,12 +187,22 @@ public class AndroidJs {
 
     @JavascriptInterface
     public void downloadUpdate(String url) {
+        downloadUpdate(url, "");
+    }
+
+    @JavascriptInterface
+    public void downloadUpdate(String url, String digest) {
         if (url == null || url.trim().isEmpty()) {
             activity.onUpdateFailed("No hay un APK para descargar.");
             return;
         }
-        downloadCancel.set(false);
         final String sourceUrl = url.trim();
+        if (!allowedUpdateUrl(sourceUrl)) {
+            activity.onUpdateFailed("La URL del APK no es HTTPS ni la LAN del PC.");
+            return;
+        }
+        downloadCancel.set(false);
+        final String wantDigest = digest == null ? "" : digest.trim();
         io.execute(() -> {
             File dir = new File(activity.getFilesDir(), "updates");
             if (!dir.exists() && !dir.mkdirs()) {
@@ -213,6 +227,10 @@ public class AndroidJs {
                     return;
                 }
                 long expected = conn.getContentLengthLong();
+                if (expected > 0 && dir.getUsableSpace() < expected + 1024L * 1024L) {
+                    activity.onUpdateFailed("No hay espacio suficiente para el APK.");
+                    return;
+                }
                 long written = 0;
                 boolean cancelled = false;
                 try (InputStream in = conn.getInputStream();
@@ -247,6 +265,19 @@ public class AndroidJs {
                     activity.onUpdateFailed("El archivo descargado no es un APK válido.");
                     return;
                 }
+                if (!wantDigest.isEmpty() && !digestMatches(apk, wantDigest)) {
+                    //noinspection ResultOfMethodCallIgnored
+                    apk.delete();
+                    activity.onUpdateFailed("El checksum del APK no coincide.");
+                    return;
+                }
+                String why = apkNotInstallable(apk);
+                if (why != null) {
+                    //noinspection ResultOfMethodCallIgnored
+                    apk.delete();
+                    activity.onUpdateFailed(why);
+                    return;
+                }
                 activity.installApk(apk);
             } catch (Exception e) {
                 //noinspection ResultOfMethodCallIgnored
@@ -257,6 +288,118 @@ public class AndroidJs {
                 if (conn != null) conn.disconnect();
             }
         });
+    }
+
+    private static boolean allowedUpdateUrl(String url) {
+        try {
+            URL parsed = new URL(url);
+            String proto = parsed.getProtocol() == null ? "" : parsed.getProtocol();
+            String host = parsed.getHost() == null ? "" : parsed.getHost();
+            if ("https".equalsIgnoreCase(proto)) return true;
+            return "http".equalsIgnoreCase(proto) && isLanHost(host);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean isLanHost(String host) {
+        host = host == null ? "" : host.toLowerCase();
+        if (host.equals("localhost") || host.equals("127.0.0.1") || host.equals("::1")) return true;
+        if (host.startsWith("192.168.") || host.startsWith("10.")) return true;
+        if (host.startsWith("172.")) {
+            String[] parts = host.split("\\.");
+            if (parts.length > 1) {
+                try {
+                    int second = Integer.parseInt(parts[1]);
+                    return second >= 16 && second <= 31;
+                } catch (Exception ignored) {}
+            }
+        }
+        return false;
+    }
+
+    private static boolean digestMatches(File apk, String spec) {
+        try {
+            String want = spec.trim();
+            String algo = "SHA-256";
+            String hex = want;
+            int colon = want.indexOf(':');
+            if (colon > 0) {
+                String name = want.substring(0, colon);
+                hex = want.substring(colon + 1);
+                if (name.equalsIgnoreCase("sha256")) algo = "SHA-256";
+                else if (name.equalsIgnoreCase("sha1")) algo = "SHA-1";
+            }
+            MessageDigest md = MessageDigest.getInstance(algo);
+            try (FileInputStream in = new FileInputStream(apk)) {
+                byte[] buf = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(buf)) > 0) md.update(buf, 0, n);
+            }
+            StringBuilder got = new StringBuilder();
+            for (byte b : md.digest()) got.append(String.format("%02x", b));
+            return got.toString().equalsIgnoreCase(hex);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String apkNotInstallable(File apk) {
+        try {
+            PackageManager pm = activity.getPackageManager();
+            String path = apk.getAbsolutePath();
+            PackageInfo archive = pm.getPackageArchiveInfo(path, 0);
+            if (archive == null || archive.packageName == null) {
+                return "El APK no se puede leer.";
+            }
+            if (archive.applicationInfo != null) {
+                archive.applicationInfo.sourceDir = path;
+                archive.applicationInfo.publicSourceDir = path;
+            }
+            if (!archive.packageName.equals(activity.getPackageName())) {
+                return "El APK no es AutoRewarder.";
+            }
+            long mine = appVersionCode();
+            long theirs = Build.VERSION.SDK_INT >= 28
+                    ? archive.getLongVersionCode()
+                    : archive.versionCode;
+            if (theirs <= mine) {
+                return "Ese APK no es más nuevo que el instalado.";
+            }
+            PackageInfo installed = pm.getPackageInfo(
+                    activity.getPackageName(), PackageManager.GET_SIGNATURES);
+            PackageInfo signed = pm.getPackageArchiveInfo(
+                    path, PackageManager.GET_SIGNATURES);
+            if (!sameSigner(installed, signed)) {
+                return "La firma del APK no coincide con la app instalada.";
+            }
+            return null;
+        } catch (Exception e) {
+            return "No se pudo verificar el APK.";
+        }
+    }
+
+    private static boolean sameSigner(PackageInfo installed, PackageInfo archive) {
+        Signature[] a = signaturesOf(installed);
+        Signature[] b = signaturesOf(archive);
+        if (a == null || b == null || a.length == 0 || b.length == 0) return false;
+        for (Signature left : a) {
+            for (Signature right : b) {
+                if (left != null && left.equals(right)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static Signature[] signaturesOf(PackageInfo info) {
+        if (info == null) return null;
+        if (Build.VERSION.SDK_INT >= 28 && info.signingInfo != null) {
+            if (info.signingInfo.hasMultipleSigners()) {
+                return info.signingInfo.getApkContentsSigners();
+            }
+            return info.signingInfo.getSigningCertificateHistory();
+        }
+        return info.signatures;
     }
 
     private static boolean isZipApk(File apk) {
