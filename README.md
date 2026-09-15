@@ -2,7 +2,7 @@
 
 AutoRewarder Mobile acompaña a AutoRewarder PC cuando necesitas las funciones de teléfono de Microsoft Rewards. Se vincula por QR o código manual, recibe acciones del PC y devuelve el estado de la actividad.
 
-> Versión documentada: **4.3.24**<br>
+> Versión documentada: **4.3.25**<br>
 > Este repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)<br>
 > Compañero del fork [iGlitchOn/AutoRewarder-PC](https://github.com/iGlitchOn/AutoRewarder-PC)<br>
 > Proyecto original: [safarsin/AutoRewarder](https://github.com/safarsin/AutoRewarder)
@@ -35,6 +35,14 @@ La aplicación puede:
 - Descargar una actualización propia y abrir el instalador de Android.
 
 Bing y Rewards siguen siendo los servicios que deciden qué tareas existen y qué puntos se acreditan. Una tarea puede desaparecer aunque la aplicación esté bien vinculada.
+
+## Licencia
+
+MIT. La app Android es © iGlitchOn (2026). La UI y el protocolo derivan del fork PC de safarsin/AutoRewarder (MIT, © 2025 safarsin). Textos: [LICENSE](LICENSE) y [NOTICE](NOTICE). ZXing y AndroidX son Apache-2.0.
+
+## Disclaimer
+
+No está afiliado a Microsoft. Automatizar Bing o Microsoft Rewards puede violar sus términos. El uso, la cuenta y los puntos son responsabilidad de quien instala la app.
 
 ## Requisitos
 

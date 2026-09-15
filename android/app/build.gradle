@@ -16,8 +16,8 @@ android {
         applicationId "off.iglitch.autorewarder"
         minSdk 26
         targetSdk 34
-    versionCode 36
-    versionName "4.3.24"
+    versionCode 37
+    versionName "4.3.25"
     }
 
     signingConfigs {

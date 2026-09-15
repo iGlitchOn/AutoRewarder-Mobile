@@ -1,0 +1,16 @@
+AutoRewarder Mobile
+Copyright (c) 2026 iGlitchOff / iGlitchOn
+Portions derived from AutoRewarder PC, a MIT fork of safarsin/AutoRewarder
+Copyright (c) 2025 safarsin
+
+The MIT license text is in LICENSE and must ship with the APK.
+
+Third-party software:
+
+- ZXing core — Apache-2.0 — https://github.com/zxing/zxing
+- AndroidX Core — Apache-2.0 — https://developer.android.com/jetpack/androidx
+- Android SDK / WebView — Google / AOSP
+- Meyer CSS reset (gui/normalize.css) — public domain
+
+This app is not affiliated with Microsoft. Automating Bing / Microsoft Rewards
+may violate Microsoft’s terms. Use is at your own risk.
