@@ -43,7 +43,7 @@ public class AndroidJs {
     private final MainActivity activity;
     private final WebView webView;
     private final SharedPreferences prefs;
-    private final ExecutorService io = Executors.newCachedThreadPool();
+    private final ExecutorService io = Executors.newFixedThreadPool(4);
     private volatile boolean discovering = false;
     private final AtomicBoolean downloadCancel = new AtomicBoolean(false);
 
