@@ -174,10 +174,21 @@ public class AndroidJs {
     }
 
     private void writePairFile(String raw) {
-        try (FileOutputStream out = new FileOutputStream(pairFile())) {
+        File dest = pairFile();
+        File tmp = new File(dest.getParentFile(), "pair.json.tmp");
+        try (FileOutputStream out = new FileOutputStream(tmp)) {
             out.write(raw.getBytes(StandardCharsets.UTF_8));
             out.getFD().sync();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            return;
+        }
+        if (dest.exists() && !dest.delete()) {
+            tmp.delete();
+            return;
+        }
+        if (!tmp.renameTo(dest)) {
+            tmp.delete();
+        }
     }
 
     @JavascriptInterface
