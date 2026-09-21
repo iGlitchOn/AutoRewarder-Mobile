@@ -12,6 +12,8 @@ const state = {
   membership: "",
   phone: "",
   pendingJob: null,
+  market: "",
+  askingVerify: false,
   pairing: false,
   scanningQr: false,
   pcBusy: false,
@@ -559,10 +561,8 @@ async function restore() {
     state.phone = me.phone || state.phone;
     state.ready = me.ready;
     if (me.ui_locale) set_ui_lang(me.ui_locale);
-    if (me.version) {
-      const el = document.getElementById("app_version");
-      if (el) el.textContent = "Microsoft Rewards · Mobile companion · " + me.version;
-    }
+    if (me.market) applyMarket(me.market);
+    showAppVersion();
     persist();
     refreshOverview();
     ensureBingSetup(false);
@@ -721,6 +721,7 @@ function handleJob(job) {
     return;
   }
   state.pendingJob = job;
+  if (job.market) applyMarket(job.market);
   log("PC job: " + kind);
   const banner = document.getElementById("job_banner");
   if (banner) {
@@ -834,6 +835,7 @@ function updateBingUi() {
   const checkinBtn = document.getElementById("phone_checkin_btn");
   const newsBtn = document.getElementById("phone_news_btn");
   const readyBtn = document.getElementById("bing_ready_btn");
+  const verifyBtn = document.getElementById("bing_verify_btn");
   if (pill) {
     pill.textContent = !installed
       ? "Bing: no instalada"
@@ -842,6 +844,7 @@ function updateBingUi() {
   if (installBtn) installBtn.hidden = installed;
   if (loginBtn) loginBtn.hidden = !installed || !!state.bingReady;
   if (readyBtn) readyBtn.hidden = !installed || !!state.bingReady;
+  if (verifyBtn) verifyBtn.hidden = !state.askingVerify;
   if (setup) setup.hidden = installed && !!state.bingReady;
   [checkinBtn, newsBtn].forEach(function (el) {
     if (el) el.disabled = !installed || !state.bingReady || !!state.pendingVerify;
@@ -907,6 +910,50 @@ function confirmBingReady() {
   }
 }
 
+function applyMarket(market) {
+  const m = String(market || "").trim();
+  if (!m) return;
+  state.market = m;
+  try { if (native() && native().setMarket) native().setMarket(m); } catch (e) {}
+}
+
+function showAppVersion() {
+  const el = document.getElementById("app_version");
+  if (!el) return;
+  let ver = "4.3.26";
+  try {
+    const n = native();
+    if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
+  } catch (e) {}
+  el.textContent = "Microsoft Rewards · Mobile companion · " + ver;
+}
+
+function askPending(kind) {
+  state.askingVerify = true;
+  state.pendingVerify = kind || state.pendingVerify;
+  const label = state.pendingVerify === "news" ? "las noticias" : "el check-in";
+  setBingBanner("No pude leer el contador. Si ya completaste " + label + " en Bing, pulsa Verificar.", true);
+  log("No se marca done hasta leer getuserinfo.");
+  updateBingUi();
+}
+
+function verifyPending() {
+  const kind = state.pendingVerify;
+  if (!kind) return;
+  state.askingVerify = false;
+  state.verifying = true;
+  updateBingUi();
+  setBingBanner("Verificando en Rewards…", true);
+  try {
+    if (native() && native().runTask) {
+      native().runTask(kind);
+      return;
+    }
+  } catch (e) {}
+  state.verifying = false;
+  askPending(kind);
+}
+
 function loginBingApp() {
   log("Abriendo Bing para iniciar sesión…");
   state.waitingBingLogin = true;
@@ -937,9 +984,11 @@ function runPhone(kind) {
     installBingApp();
     return;
   }
+  if (state.market) applyMarket(state.market);
   const label = kind === "news" ? "noticias" : "check-in";
   log("Abriendo " + label + " en Bing…");
-  setBingBanner("Completa " + label + " en Bing. Al volver, AutoRewarder verifica el progreso.", true);
+  setBingBanner("Completa " + label + " en Bing. Al volver se lee el contador de Rewards.", true);
+  state.askingVerify = false;
   state.pendingVerify = kind;
   updateBingUi();
   let opened = false;
@@ -947,6 +996,7 @@ function runPhone(kind) {
     if (native() && native().openBingApp) opened = !!native().openBingApp(kind);
   } catch (e) {}
   if (!opened) {
+    state.verifying = true;
     if (native() && native().runTask) native().runTask(kind);
     else if (native() && native().openBing) native().openBing(kind);
   }
@@ -954,9 +1004,17 @@ function runPhone(kind) {
 
 window.onBingTask = function (ok, detail) {
   const kind = state.pendingVerify || "task";
+  const text = String(detail || "");
+  state.verifying = false;
+  if (text.indexOf("ask:") === 0) {
+    askPending(kind);
+    return;
+  }
   state.pendingVerify = null;
-  finishPending(!!ok, detail || "");
-  reportEvent(kind, !!ok, detail || "");
+  state.askingVerify = false;
+  const msg = text || (ok ? "Listo" : "no se pudo");
+  finishPending(!!ok, msg);
+  reportEvent(kind, !!ok, msg);
   refreshAll();
 };
 
@@ -997,12 +1055,21 @@ window.onAppResume = function () {
       log("Volviste, pero Bing no está instalada.");
       setBingBanner("Instala Bing para continuar.", true);
     }
-  } else if (state.pendingVerify) {
+  } else if (state.pendingVerify && !state.verifying && !state.askingVerify) {
     const kind = state.pendingVerify;
-    state.pendingVerify = null;
-    log("Volviste de Bing. Completa el check-in o las noticias en Bing si aún no lo hiciste.");
-    reportEvent(kind, false, "returned from bing, not verified");
-    finishPending(false, "returned from bing, not verified");
+    log("Volviste de Bing. Verificando " + (kind === "news" ? "noticias" : "check-in") + "…");
+    setBingBanner("Verificando en Rewards…", true);
+    let started = false;
+    try {
+      if (native() && native().runTask) {
+        state.verifying = true;
+        native().runTask(kind);
+        started = true;
+      }
+    } catch (e) {
+      state.verifying = false;
+    }
+    if (!started) askPending(kind);
   }
   if (state.token) refreshAll();
   checkPhoneUpdate();
@@ -1177,7 +1244,7 @@ async function checkPhoneUpdate(manual) {
   if (manual && button) { button.disabled = true; button.textContent = "Comprobando…"; }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.22") : "4.3.22";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.26") : "4.3.26";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;
@@ -1246,6 +1313,7 @@ window.onUpdateFailed = function (msg) {
 };
 
 try { if (native() && native().discover) native().discover(); } catch (e) {}
+showAppVersion();
 restore();
 checkPhoneUpdate();
 setTimeout(function () {

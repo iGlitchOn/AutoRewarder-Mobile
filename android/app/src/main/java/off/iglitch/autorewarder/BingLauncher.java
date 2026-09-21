@@ -41,11 +41,12 @@ public final class BingLauncher {
     }
 
     public static boolean open(Context context, String kind) {
-        String url = "https://www.bing.com/?form=APMCS1&setmkt=es-CO";
+        String mkt = BingMarket.get();
+        String url = "https://www.bing.com/?form=APMCS1&setmkt=" + mkt;
         if ("news".equals(kind)) {
-            url = "https://www.bing.com/news?form=APMCS1&setmkt=es-CO";
+            url = "https://www.bing.com/news?form=APMCS1&setmkt=" + mkt;
         } else if ("rewards".equals(kind) || "login".equals(kind)) {
-            url = "https://rewards.bing.com/?form=APMCS1&setmkt=es-CO";
+            url = "https://rewards.bing.com/?form=APMCS1&setmkt=" + mkt;
         }
         Intent view = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

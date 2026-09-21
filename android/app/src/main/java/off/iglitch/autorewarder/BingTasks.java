@@ -1,5 +1,7 @@
 package off.iglitch.autorewarder;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.CookieManager;
@@ -9,72 +11,66 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-/** Automates check-in / news inside a BingSapphire WebView on this phone. */
+/** Check-in / news in a WebView. Done only when getuserinfo says so. */
 final class BingTasks {
     static final String UA =
             "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 "
                     + "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36 "
                     + "BingSapphire/30.0.410309301";
 
-    private static final String[] CHECKIN_URLS = {
-            "https://www.bing.com/?form=APMCS1&setmkt=es-CO",
-            "https://rewards.bing.com/dashboard?setmkt=es-CO",
-            "https://rewards.bing.com/?form=ML2N2V&setmkt=es-CO",
-            "https://rewards.bing.com/dashboard?setmkt=es-CO"
-    };
-    private static final String NEWS_URL =
-            "https://www.bing.com/news?form=APMCS1&setmkt=es-CO&dcf=1";
-
-    private static final String CHECKIN_JS =
-            "(async function(){"
-                    + "function clickCheck(){"
-                    + " var nodes=document.querySelectorAll('button,a,[role=button],span,div,p');"
-                    + " for(var i=0;i<nodes.length;i++){"
-                    + "  var el=nodes[i];"
-                    + "  var t=((el.innerText||el.getAttribute('aria-label')||'')+'').replace(/\\s+/g,' ').trim();"
-                    + "  if(!t||t.length>90) continue;"
-                    + "  if(/redeem|canjear|donate|donar/i.test(t)) continue;"
-                    + "  if(/check[\\s-]?in|registrar(se)?|fichar|asistencia|claim|reclamar/i.test(t)){"
-                    + "    (el.closest('button,a,[role=button]')||el).click(); return true;"
-                    + "  }"
+    private static final String CLICK_JS =
+            "(function(){"
+                    + "var nodes=document.querySelectorAll('button,a,[role=button],span,div,p');"
+                    + "for(var i=0;i<nodes.length;i++){"
+                    + " var el=nodes[i];"
+                    + " var t=((el.innerText||el.getAttribute('aria-label')||'')+'').replace(/\\s+/g,' ').trim();"
+                    + " if(!t||t.length>90) continue;"
+                    + " if(/redeem|canjear|donate|donar/i.test(t)) continue;"
+                    + " if(/check[\\s-]?in|registrar(se)?|fichar|asistencia/i.test(t)){"
+                    + "  (el.closest('button,a,[role=button]')||el).click(); return true;"
                     + " }"
-                    + " return false;"
                     + "}"
-                    + "var clicked=false; try{clicked=!!clickCheck();}catch(e){}"
-                    + "var ids=[];"
+                    + "return false;"
+                    + "})();";
+
+    private static final String SNAPSHOT_JS =
+            "(async function(){"
                     + "try{"
                     + " const r=await fetch('https://rewards.bing.com/api/getuserinfo?type=1',{credentials:'include'});"
+                    + " if(!r.ok) return JSON.stringify({readable:false,status:r.status});"
                     + " const data=await r.json();"
                     + " const dash=data.dashboard||{};"
-                    + " const promos=[].concat(dash.promotionalItems||[],dash.morePromotions||[],dash.punchCards||[]);"
+                    + " const counters=((dash.userStatus||{}).counters)||{};"
+                    + " function frac(keys){"
+                    + "  for(var i=0;i<keys.length;i++){"
+                    + "   var blob=counters[keys[i]];"
+                    + "   if(Array.isArray(blob)) blob=blob[0];"
+                    + "   if(!blob) continue;"
+                    + "   var done=blob.pointProgress, max=blob.pointProgressMax;"
+                    + "   if(typeof done==='number'&&typeof max==='number'&&max>0) return [done,max];"
+                    + "  }"
+                    + "  return null;"
+                    + " }"
+                    + " var news=frac(['readArticle','readarticle','newsSearch']);"
+                    + " var checkin=null;"
+                    + " var promos=[].concat(dash.promotionalItems||[], dash.morePromotions||[]);"
                     + " for(var i=0;i<promos.length;i++){"
                     + "  var p=promos[i]||{}; var parent=p.parentPromotion||p;"
+                    + "  var ptype=String(parent.promotionType||'').toLowerCase();"
                     + "  var title=((parent.name||'')+' '+(parent.title||'')+' '+(parent.description||'')).toLowerCase();"
-                    + "  var ptype=(parent.promotionType||'').toLowerCase();"
-                    + "  if(ptype==='checkin'||title.indexOf('check-in')>=0||title.indexOf('check in')>=0||title.indexOf('registro')>=0){"
-                    + "   if(parent.complete) return JSON.stringify({ok:true,how:'already'});"
-                    + "   if(parent.offerId) ids.push(parent.offerId);"
+                    + "  if(ptype==='checkin'||title.indexOf('check-in')>=0||title.indexOf('check in')>=0){"
+                    + "   checkin=parent.complete?[1,1]:[0,1]; break;"
                     + "  }"
                     + " }"
-                    + "}catch(e){}"
-                    + "ids=ids.concat(['MobileApp_Checkin','App_Checkin','ENUS_checkin','ESCO_checkin','checkin']);"
-                    + "for(var j=0;j<ids.length;j++){"
-                    + " var id=ids[j]; if(!id) continue;"
-                    + " try{"
-                    + "  var st=await fetch('https://prod.rewardsplatform.microsoft.com/dapi/me/activities',{"
-                    + "   method:'POST',credentials:'include',"
-                    + "   headers:{'Content-Type':'application/json'},"
-                    + "   body:JSON.stringify({id:crypto.randomUUID(),offerId:id,type:'urlreward',amount:1})"
-                    + "  }).then(function(r){return r.status;}).catch(function(){return -1;});"
-                    + "  if(st===200||st===204) return JSON.stringify({ok:true,how:'api '+id});"
-                    + " }catch(e){}"
-                    + "}"
-                    + "return JSON.stringify({ok:clicked,how:clicked?'ui':'none'});"
+                    + " return JSON.stringify({readable:true,checkin:checkin,news:news});"
+                    + "}catch(e){return JSON.stringify({readable:false,error:String(e)});}"
                     + "})();";
 
     private static final String NEWS_HREFS_JS =
@@ -106,6 +102,10 @@ final class BingTasks {
     private final List<String> newsHrefs = new ArrayList<>();
     private int newsIndex = 0;
     private boolean running = false;
+    private boolean sawReadable = false;
+    private boolean newsSnapshotted = false;
+    private int newsStart = -1;
+    private String[] checkinUrls = new String[0];
     private static final int TASK_DEADLINE_MS = 90000;
 
     BingTasks(MainActivity activity, WebView bing) {
@@ -123,12 +123,23 @@ final class BingTasks {
         bing.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    view.loadUrl(url);
-                    return true;
-                }
-                return true;
+                if (request == null || request.getUrl() == null) return false;
+                Uri uri = request.getUrl();
+                String scheme = uri.getScheme() == null
+                        ? ""
+                        : uri.getScheme().toLowerCase(Locale.US);
+                if ("http".equals(scheme) || "https".equals(scheme)) return false;
+                try {
+                    Intent intent = "intent".equals(scheme)
+                            ? Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME)
+                            : new Intent(Intent.ACTION_VIEW, uri);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    if (intent.resolveActivity(activity.getPackageManager()) != null) {
+                        activity.startActivity(intent);
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+                return false;
             }
 
             @Override
@@ -138,7 +149,7 @@ final class BingTasks {
 
             @Override
             public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                if (running) finish(false, "WebView de Bing se cerró.");
+                if (running) finish(false, "no se pudo");
                 return true;
             }
         });
@@ -151,16 +162,25 @@ final class BingTasks {
         this.newsHrefs.clear();
         this.newsIndex = 0;
         this.running = true;
+        this.sawReadable = false;
+        this.newsSnapshotted = false;
+        this.newsStart = -1;
+        String mkt = BingMarket.get();
+        this.checkinUrls = new String[] {
+                "https://www.bing.com/?form=APMCS1&setmkt=" + mkt,
+                "https://rewards.bing.com/dashboard?setmkt=" + mkt,
+                "https://rewards.bing.com/?form=ML2N2V&setmkt=" + mkt
+        };
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(() -> {
-            if (running) finish(false, "Bing no respondió a tiempo.");
+            if (running) finish(false, "no se pudo");
         }, TASK_DEADLINE_MS);
         if ("news".equals(this.kind)) {
             activity.setBingStatus("Abriendo noticias Bing…");
-            bing.loadUrl(NEWS_URL);
+            bing.loadUrl("https://www.bing.com/news?form=APMCS1&setmkt=" + mkt + "&dcf=1");
         } else {
             activity.setBingStatus("Abriendo Rewards para check-in…");
-            bing.loadUrl(CHECKIN_URLS[0]);
+            bing.loadUrl(checkinUrls[0]);
         }
     }
 
@@ -170,7 +190,7 @@ final class BingTasks {
     }
 
     private boolean isLogin(String url) {
-        String u = url == null ? "" : url.toLowerCase();
+        String u = url == null ? "" : url.toLowerCase(Locale.US);
         return u.contains("login.live.com")
                 || u.contains("login.microsoftonline.com")
                 || u.contains("account.live.com")
@@ -196,38 +216,80 @@ final class BingTasks {
     }
 
     private void handleCheckin() {
-        handler.postDelayed(() -> bing.evaluateJavascript(CHECKIN_JS, value -> {
+        handler.postDelayed(() -> {
             if (!running) return;
-            boolean ok = false;
-            String how = "";
-            try {
-                String raw = decodeJs(value);
-                JSONObject o = new JSONObject(raw);
-                ok = o.optBoolean("ok", false);
-                how = o.optString("how", "");
-            } catch (Exception e) {
-                if (value != null && value.contains("ok") && value.contains("true")) ok = true;
-            }
-            if (ok) {
-                finish(true, "Check-in listo (" + how + ")");
-                return;
-            }
-            step++;
-            if (step < CHECKIN_URLS.length) {
-                activity.setBingStatus("Check-in, intento " + (step + 1) + "…");
-                bing.loadUrl(CHECKIN_URLS[step]);
-            } else {
-                finish(false, "No se pudo reclamar el check-in. ¿Misma cuenta Microsoft?");
-            }
-        }), 2500);
+            bing.evaluateJavascript(SNAPSHOT_JS, value -> {
+                if (!running) return;
+                JSONObject o = parseObj(value);
+                if (o.optBoolean("readable")) {
+                    sawReadable = true;
+                    if (checkinDone(o)) {
+                        finish(true, checkinLabel(o));
+                        return;
+                    }
+                }
+                bing.evaluateJavascript(CLICK_JS, clicked -> {
+                    if (!running) return;
+                    step++;
+                    if (step < checkinUrls.length) {
+                        activity.setBingStatus("Check-in, intento " + (step + 1) + "…");
+                        bing.loadUrl(checkinUrls[step]);
+                    } else {
+                        confirmCheckin();
+                    }
+                });
+            });
+        }, 2500);
+    }
+
+    private void confirmCheckin() {
+        handler.postDelayed(() -> {
+            if (!running) return;
+            bing.evaluateJavascript(SNAPSHOT_JS, value -> {
+                if (!running) return;
+                JSONObject o = parseObj(value);
+                if (o.optBoolean("readable") && checkinDone(o)) {
+                    finish(true, checkinLabel(o));
+                    return;
+                }
+                if (!o.optBoolean("readable") && !sawReadable) {
+                    finish(false, "ask:no se pudo leer getuserinfo");
+                    return;
+                }
+                finish(false, "no se pudo");
+            });
+        }, 2500);
     }
 
     private void handleNews(String url) {
-        if (newsHrefs.isEmpty() && url != null && url.contains("/news")) {
-            handler.postDelayed(() -> bing.evaluateJavascript(NEWS_HREFS_JS, value -> {
-                parseHrefs(value);
-                openNextArticle();
-            }), 2000);
+        if (!newsSnapshotted) {
+            newsSnapshotted = true;
+            final String page = url;
+            handler.postDelayed(() -> {
+                if (!running) return;
+                bing.evaluateJavascript(SNAPSHOT_JS, value -> {
+                    if (!running) return;
+                    newsSnapshotted = true;
+                    JSONObject o = parseObj(value);
+                    if (!o.optBoolean("readable")) {
+                        finish(false, "ask:no se pudo leer getuserinfo");
+                        return;
+                    }
+                    JSONArray news = o.optJSONArray("news");
+                    if (news == null || news.length() < 2 || news.optInt(1, 0) <= 0) {
+                        finish(false, "no se pudo");
+                        return;
+                    }
+                    int done = news.optInt(0, 0);
+                    int max = news.optInt(1, 0);
+                    if (done >= max) {
+                        finish(true, "Noticias " + done + "/" + max);
+                        return;
+                    }
+                    newsStart = done;
+                    collectNews(page);
+                });
+            }, 1500);
             return;
         }
         if (newsIndex > 0 && newsIndex <= newsHrefs.size()) {
@@ -235,10 +297,42 @@ final class BingTasks {
         }
     }
 
+    private void collectNews(String url) {
+        if (url != null && url.contains("/news")) {
+            handler.postDelayed(() -> bing.evaluateJavascript(NEWS_HREFS_JS, value -> {
+                parseHrefs(value);
+                openNextArticle();
+            }), 2000);
+            return;
+        }
+        openNextArticle();
+    }
+
     private static String decodeJs(String value) throws Exception {
         if (value == null || value.equals("null")) return "{}";
         Object parsed = new org.json.JSONTokener(value).nextValue();
         return parsed == null ? "{}" : parsed.toString();
+    }
+
+    private JSONObject parseObj(String value) {
+        try {
+            return new JSONObject(decodeJs(value));
+        } catch (Exception e) {
+            return new JSONObject();
+        }
+    }
+
+    private static boolean checkinDone(JSONObject o) {
+        JSONArray c = o.optJSONArray("checkin");
+        if (c == null || c.length() < 2) return false;
+        int total = c.optInt(1, 0);
+        return total > 0 && c.optInt(0, 0) >= total;
+    }
+
+    private static String checkinLabel(JSONObject o) {
+        JSONArray c = o.optJSONArray("checkin");
+        if (c == null || c.length() < 2) return "Check-in listo";
+        return "Check-in " + c.optInt(0, 0) + "/" + c.optInt(1, 0);
     }
 
     private void parseHrefs(String value) {
@@ -256,13 +350,28 @@ final class BingTasks {
     private void openNextArticle() {
         if (!running) return;
         if (newsIndex >= newsHrefs.size() || newsIndex >= 6) {
-            finish(true, "Noticias: abiertas " + newsIndex + " artículos");
+            verifyNews();
             return;
         }
         String href = newsHrefs.get(newsIndex);
         newsIndex++;
         activity.setBingStatus("Leyendo artículo " + newsIndex + "…");
         bing.loadUrl(href);
+    }
+
+    private void verifyNews() {
+        bing.evaluateJavascript(SNAPSHOT_JS, value -> {
+            if (!running) return;
+            JSONObject o = parseObj(value);
+            JSONArray news = o.optJSONArray("news");
+            int now = news == null ? -1 : news.optInt(0, -1);
+            int max = news == null ? 0 : news.optInt(1, 0);
+            if (newsStart >= 0 && now > newsStart) {
+                finish(true, "Noticias " + now + "/" + max);
+                return;
+            }
+            finish(false, "no se pudo");
+        });
     }
 
     private void finish(boolean ok, String detail) {

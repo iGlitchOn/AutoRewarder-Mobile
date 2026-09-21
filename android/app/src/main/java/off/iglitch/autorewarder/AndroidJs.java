@@ -447,6 +447,11 @@ public class AndroidJs {
     }
 
     @JavascriptInterface
+    public void setMarket(String market) {
+        BingMarket.set(market);
+    }
+
+    @JavascriptInterface
     public boolean openBingApp(String kind) {
         return BingLauncher.open(activity, kind);
     }
