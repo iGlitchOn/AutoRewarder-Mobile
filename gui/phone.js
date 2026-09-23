@@ -873,10 +873,10 @@ function updateBingUi() {
   const readyBtn = document.getElementById("bing_ready_btn");
   const verifyBtn = document.getElementById("bing_verify_btn");
   if (pill) {
-    if (st === "disabled") pill.textContent = "Bing: desactivada";
-    else if (!installed) pill.textContent = "Bing: no instalada";
-    else if (state.bingReady) pill.textContent = "Bing: sesión lista";
-    else pill.textContent = "Bing: sin sesión";
+    if (st === "disabled") pill.textContent = t("bing.disabled");
+    else if (!installed) pill.textContent = t("bing.missing");
+    else if (state.bingReady) pill.textContent = t("bing.ready");
+    else pill.textContent = t("bing.nosession");
   }
   const showInstall = st === "missing";
   const showLogin = installed && !state.bingReady;
@@ -891,9 +891,9 @@ function updateBingUi() {
     if (el) el.disabled = !installed || !state.bingReady || !!state.pendingVerify;
   });
   if (st === "disabled") {
-    setBingBanner("Bing está desactivada", true);
+    setBingBanner(t("bing.off"), true);
   } else if (!installed) {
-    setBingBanner("Bing: no instalada", true);
+    setBingBanner(t("bing.install_banner"), true);
   } else if (state.waitingBingLogin) {
     setBingBanner("Inicia sesión con la cuenta Microsoft. La sesión queda en esta app.", true);
   } else if (state.probingSession || state.verifying) {
@@ -901,7 +901,7 @@ function updateBingUi() {
   } else if (state.askingVerify) {
     // askPending sets its own banner.
   } else if (!state.bingReady) {
-    setBingBanner("Bing: sin sesión", true);
+    setBingBanner(t("bing.nosession"), true);
   } else if (!state.pendingVerify) {
     setBingBanner("");
   }
@@ -963,7 +963,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.29";
+  let ver = "4.3.30";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -1310,8 +1310,10 @@ function setUpdateBanner(msg, warn) {
   else el.textContent = msg;
   el.classList.toggle("warn", !!warn);
   const download = document.getElementById("update_download_btn");
+  const canDownload = !!(state.pendingPhoneUpdate && state.pendingPhoneUpdate.download_url);
   if (download) {
-    download.disabled = !(state.pendingPhoneUpdate && state.pendingPhoneUpdate.download_url);
+    download.hidden = !canDownload;
+    download.disabled = !canDownload;
   }
 }
 
@@ -1329,7 +1331,7 @@ function downloadPhoneUpdate() {
   const update = state.pendingPhoneUpdate;
   if (!update || !update.download_url || state.phoneUpdateDownloading) return;
   state.phoneUpdateDownloading = true;
-  setUpdateBanner(update.source === "pc" ? "Descargando la actualización desde el PC…" : "Descargando la actualización desde GitHub…");
+  setUpdateBanner(t("updates.phone_down"));
   const download = document.getElementById("update_download_btn");
   if (download) download.disabled = true;
   const n = native();
@@ -1422,10 +1424,10 @@ async function checkPhoneUpdate(manual) {
   state.phoneUpdateCheckRunning = true;
   const watchdog = setTimeout(function () { state.phoneUpdateCheckRunning = false; }, 25000);
   const button = document.getElementById("updates_btn");
-  if (manual && button) { button.disabled = true; button.textContent = "Comprobando…"; }
+  if (manual && button) { button.disabled = true; button.textContent = t("updates.checking"); }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.29") : "4.3.29";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.30") : "4.3.30";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;
@@ -1443,20 +1445,21 @@ async function checkPhoneUpdate(manual) {
     }
     if (pcUpdate && newerThanMine(pcUpdate)) {
       state.pendingPhoneUpdate = pcUpdate;
-      setUpdateBanner("Nueva actualización del PC " + pcUpdate.tag + ". ¿Quieres descargarla?");
+      setUpdateBanner(tf("updates.phone_ask", { tag: pcUpdate.tag }));
     } else if (custom && custom.tag && _phoneReleaseNewer(custom.tag, mine)) {
       state.pendingPhoneUpdate = custom;
       if (custom.download_url) {
-        setUpdateBanner("Nueva actualización propia " + custom.tag + ". ¿Quieres descargarla?");
+        setUpdateBanner(tf("updates.phone_ask", { tag: custom.tag }));
       } else {
-        setUpdateBanner("Nueva versión propia " + custom.tag + ", pero todavía no hay un APK adjunto.", true);
+        state.pendingPhoneUpdate = null;
+        setUpdateBanner(tf("updates.no_installer", { tag: custom.tag }), true);
       }
     } else if (manual) {
       state.pendingPhoneUpdate = null;
       if (customFailed) {
-        setUpdateBanner("No se pudo comprobar GitHub.", true);
+        setUpdateBanner(t("updates.github"), true);
       } else {
-        setUpdateBanner("No hay una actualización propia disponible.");
+        setUpdateBanner(t("updates.phone_none"));
         setTimeout(function () { if (!state.pendingPhoneUpdate) setUpdateBanner(""); }, 4000);
       }
     } else {
@@ -1464,7 +1467,7 @@ async function checkPhoneUpdate(manual) {
       setUpdateBanner("");
     }
   } catch (e) {
-    if (manual) setUpdateBanner("No se pudo comprobar GitHub.", true);
+    if (manual) setUpdateBanner(t("updates.github"), true);
     else {
       state.pendingPhoneUpdate = null;
       setUpdateBanner("");
@@ -1472,7 +1475,7 @@ async function checkPhoneUpdate(manual) {
   } finally {
     clearTimeout(watchdog);
     state.phoneUpdateCheckRunning = false;
-    if (manual && button) { button.disabled = false; button.textContent = "Buscar updates"; }
+    if (manual && button) { button.disabled = false; button.textContent = t("phone.updates"); }
   }
 }
 
