@@ -731,7 +731,31 @@ function handleJob(job) {
   runPhone(kind);
 }
 
+function detailDeniesSuccess(detail) {
+  const text = String(detail || "").toLowerCase();
+  const blocked = ["not verified", "ask:", "opened", "no se pudo", "timeout", "abiertas"];
+  for (let i = 0; i < blocked.length; i++) {
+    if (text.indexOf(blocked[i]) >= 0) return true;
+  }
+  return false;
+}
+
+function detailHasTaskCounter(detail) {
+  const m = String(detail || "").match(/(?:check-in|noticias)\s+(\d+)\s*\/\s*(\d+)/i);
+  if (!m) return false;
+  const done = Number(m[1]);
+  const max = Number(m[2]);
+  return done > 0 && max > 0;
+}
+
+// Native true is not check-in/news success unless the detail is a real counter.
+function reportedTaskOk(ok, detail) {
+  if (!ok || detailDeniesSuccess(detail)) return false;
+  return detailHasTaskCounter(detail);
+}
+
 async function finishPending(ok, detail) {
+  ok = reportedTaskOk(ok, detail);
   const job = state.pendingJob;
   const id = job ? String(job.id || "").trim() : "";
   if (id) {
@@ -920,7 +944,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.27";
+  let ver = "4.3.28";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -1013,13 +1037,16 @@ window.onBingTask = function (ok, detail) {
   state.pendingVerify = null;
   state.askingVerify = false;
   const msg = text || (ok ? "Listo" : "no se pudo");
-  finishPending(!!ok, msg);
-  reportEvent(kind, !!ok, msg);
+  const reported = reportedTaskOk(ok, msg);
+  finishPending(reported, msg);
+  reportEvent(kind, reported, msg);
   refreshAll();
 };
 
 function reportEvent(kind, ok, detail) {
   if (!state.token) return;
+  if (kind === "checkin" || kind === "news" || kind === "task") ok = reportedTaskOk(ok, detail);
+  else if (detailDeniesSuccess(detail)) ok = false;
   request("POST", "/phone/event", {
     kind: kind || "",
     ok: !!ok,
@@ -1244,7 +1271,7 @@ async function checkPhoneUpdate(manual) {
   if (manual && button) { button.disabled = true; button.textContent = "Comprobando…"; }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.27") : "4.3.27";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.28") : "4.3.28";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;

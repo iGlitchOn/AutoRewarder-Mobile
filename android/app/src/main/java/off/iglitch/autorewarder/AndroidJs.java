@@ -31,6 +31,7 @@ import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -223,13 +224,23 @@ public class AndroidJs {
             File apk = new File(dir, "AutoRewarder.apk");
             HttpURLConnection conn = null;
             try {
+                if (!urlAllowed(sourceUrl)) {
+                    activity.onUpdateFailed("La URL del APK no es HTTPS ni la LAN del PC.");
+                    return;
+                }
                 conn = (HttpURLConnection) new URL(sourceUrl).openConnection();
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(120000);
-                conn.setInstanceFollowRedirects(true);
+                conn.setInstanceFollowRedirects(
+                        "https".equalsIgnoreCase(new URL(sourceUrl).getProtocol()));
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("User-Agent", "AutoRewarder-Phone");
                 int code = conn.getResponseCode();
+                URL landed = conn.getURL();
+                if (landed == null || !urlAllowed(landed.toString())) {
+                    activity.onUpdateFailed("La URL del APK no es HTTPS ni la LAN del PC.");
+                    return;
+                }
                 if (code >= 400) {
                     boolean github = sourceUrl.contains("github.com")
                             || sourceUrl.contains("githubusercontent.com");
@@ -302,31 +313,74 @@ public class AndroidJs {
     }
 
     private static boolean allowedUpdateUrl(String url) {
+        return urlAllowed(url);
+    }
+
+    /**
+     * Cleartext only on LAN. Android domain-config cannot express RFC1918,
+     * so every HttpURLConnection helper rejects http unless the host is
+     * loopback (127.0.0.0/8, ::1, localhost), private (10/8, 172.16/12,
+     * 192.168/16), link-local (169.254/16), or an mDNS .local name.
+     * HTTPS to Bing, Rewards, and GitHub stays allowed.
+     */
+    static boolean urlAllowed(String url) {
+        if (url == null || url.isEmpty()) return false;
         try {
             URL parsed = new URL(url);
-            String proto = parsed.getProtocol() == null ? "" : parsed.getProtocol();
-            String host = parsed.getHost() == null ? "" : parsed.getHost();
+            String proto = parsed.getProtocol();
+            if (proto == null) return false;
             if ("https".equalsIgnoreCase(proto)) return true;
-            return "http".equalsIgnoreCase(proto) && isLanHost(host);
+            if (!"http".equalsIgnoreCase(proto)) return false;
+            return cleartextHostAllowed(parsed.getHost());
         } catch (Exception e) {
             return false;
         }
     }
 
-    private static boolean isLanHost(String host) {
-        host = host == null ? "" : host.toLowerCase();
-        if (host.equals("localhost") || host.equals("127.0.0.1") || host.equals("::1")) return true;
-        if (host.startsWith("192.168.") || host.startsWith("10.")) return true;
-        if (host.startsWith("172.")) {
-            String[] parts = host.split("\\.");
-            if (parts.length > 1) {
-                try {
-                    int second = Integer.parseInt(parts[1]);
-                    return second >= 16 && second <= 31;
-                } catch (Exception ignored) {}
-            }
+    private static boolean cleartextHostAllowed(String host) {
+        if (host == null) return false;
+        host = host.trim().toLowerCase(Locale.US);
+        if (host.startsWith("[") && host.endsWith("]") && host.length() > 2) {
+            host = host.substring(1, host.length() - 1).trim();
         }
+        while (host.endsWith(".") && host.length() > 1) {
+            host = host.substring(0, host.length() - 1);
+        }
+        if (host.isEmpty()) return false;
+        if ("localhost".equals(host) || "::1".equals(host)) return true;
+        if (host.endsWith(".local") && host.length() > ".local".length() && host.charAt(0) != '.') {
+            return true;
+        }
+        int[] v4 = parseIpv4(host);
+        if (v4 == null) return false;
+        int a = v4[0];
+        int b = v4[1];
+        if (a == 127 || a == 10) return true;
+        if (a == 172 && b >= 16 && b <= 31) return true;
+        if (a == 192 && b == 168) return true;
+        if (a == 169 && b == 254) return true;
         return false;
+    }
+
+    private static int[] parseIpv4(String host) {
+        String[] parts = host.split("\\.", -1);
+        if (parts.length != 4) return null;
+        int[] out = new int[4];
+        for (int i = 0; i < 4; i++) {
+            String part = parts[i];
+            if (part.isEmpty() || part.length() > 3) return null;
+            for (int c = 0; c < part.length(); c++) {
+                char ch = part.charAt(c);
+                if (ch < '0' || ch > '9') return null;
+            }
+            try {
+                out[i] = Integer.parseInt(part);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+            if (out[i] > 255) return null;
+        }
+        return out;
     }
 
     private static boolean digestMatches(File apk, String spec) {
@@ -484,12 +538,15 @@ public class AndroidJs {
 
     @JavascriptInterface
     public String http(String method, String url, String body, String token) {
+        if (!urlAllowed(url)) {
+            return "{\"ok\":false,\"error\":\"cleartext_blocked\"}";
+        }
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(url).openConnection();
             conn.setConnectTimeout(8000);
             conn.setReadTimeout(15000);
-            conn.setInstanceFollowRedirects(true);
+            conn.setInstanceFollowRedirects("https".equalsIgnoreCase(new URL(url).getProtocol()));
             conn.setRequestMethod(method == null ? "GET" : method.toUpperCase());
             boolean github = url != null && url.contains("api.github.com");
             conn.setRequestProperty(
@@ -509,6 +566,10 @@ public class AndroidJs {
                 os.close();
             }
             int code = conn.getResponseCode();
+            URL landed = conn.getURL();
+            if (landed == null || !urlAllowed(landed.toString())) {
+                return "{\"ok\":false,\"error\":\"cleartext_blocked\"}";
+            }
             InputStream in = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
             if (in == null) in = conn.getInputStream();
             String text = readStream(in);
@@ -693,15 +754,19 @@ public class AndroidJs {
     }
 
     private static boolean pingBridge(String host) {
+        String url = "http://" + host + ":38471/ping";
+        if (!urlAllowed(url)) return false;
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) new URL("http://" + host + ":38471/ping").openConnection();
+            conn = (HttpURLConnection) new URL(url).openConnection();
             conn.setConnectTimeout(280);
             conn.setReadTimeout(280);
             conn.setInstanceFollowRedirects(false);
             conn.setRequestMethod("GET");
             int code = conn.getResponseCode();
             if (code >= 400) return false;
+            URL landed = conn.getURL();
+            if (landed == null || !urlAllowed(landed.toString())) return false;
             InputStream in = conn.getInputStream();
             String body = readStream(in);
             return body != null && body.contains("\"ok\"");
