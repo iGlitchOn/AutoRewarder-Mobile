@@ -44,7 +44,7 @@ public class MainActivity extends Activity {
         bingWrap = findViewById(R.id.bing_wrap);
         bingStatus = findViewById(R.id.bing_status);
         Button close = findViewById(R.id.bing_close);
-        close.setOnClickListener(v -> hideBing(false, "Cerrado"));
+        close.setOnClickListener(v -> closeBing());
 
         @SuppressLint("SetJavaScriptEnabled")
         WebSettings settings = ui.getSettings();
@@ -133,6 +133,50 @@ public class MainActivity extends Activity {
         });
     }
 
+    void openRewardsLogin() {
+        runOnUiThread(() -> {
+            if (tasks == null) return;
+            bingWrap.setVisibility(View.VISIBLE);
+            setBingStatus("Inicia sesión con la cuenta Microsoft.");
+            tasks.openLogin();
+        });
+    }
+
+    void probeBingSession() {
+        runOnUiThread(() -> {
+            if (tasks == null) {
+                deliverSession(false);
+                return;
+            }
+            tasks.probeForUi();
+        });
+    }
+
+    void deliverSession(boolean loggedIn) {
+        runOnUiThread(() -> {
+            if (ui == null) return;
+            ui.evaluateJavascript(
+                    "window.onBingSession && onBingSession(" + loggedIn + ")",
+                    null);
+        });
+    }
+
+    void hideBingPanel() {
+        runOnUiThread(() -> {
+            if (bingWrap != null) bingWrap.setVisibility(View.GONE);
+        });
+    }
+
+    void closeBing() {
+        runOnUiThread(() -> {
+            if (tasks != null && tasks.isLoginMode()) {
+                tasks.finishLogin();
+                return;
+            }
+            hideBing(false, "Cerrado");
+        });
+    }
+
     void setBingStatus(String text) {
         runOnUiThread(() -> bingStatus.setText(text));
     }
@@ -210,7 +254,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (bingWrap.getVisibility() == View.VISIBLE) {
-            hideBing(false, "Cancelado");
+            closeBing();
             return;
         }
         super.onBackPressed();

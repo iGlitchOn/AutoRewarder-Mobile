@@ -23,6 +23,7 @@ const state = {
   phoneUpdateDownloading: false,
   originalUpdateNotified: false,
   restored: false,
+  bingReady: false,
 };
 
 function log(msg) {
@@ -76,7 +77,6 @@ function persist() {
     account: state.account,
     membership: state.membership,
     phone: state.phone,
-    bingReady: !!state.bingReady,
   });
 }
 
@@ -549,7 +549,7 @@ async function restore() {
   state.account = saved.account;
   state.membership = saved.membership;
   state.phone = saved.phone || deviceName();
-  state.bingReady = !!saved.bingReady;
+  state.bingReady = false;
   showMain();
   try { if (native() && native().discover) native().discover(); } catch (e) {}
   try {
@@ -831,9 +831,20 @@ async function stopPc() {
   }
 }
 
+function bingPackageState() {
+  try {
+    const n = native();
+    if (n && n.bingPackageState) {
+      const s = String(n.bingPackageState() || "");
+      if (s === "disabled" || s === "installed" || s === "missing") return s;
+    }
+    if (n && n.hasBing) return n.hasBing() ? "installed" : "missing";
+  } catch (e) {}
+  return "missing";
+}
+
 function bingInstalled() {
-  try { if (native() && native().hasBing) return !!native().hasBing(); } catch (e) {}
-  return false;
+  return bingPackageState() === "installed";
 }
 
 function setBingBanner(msg, warn) {
@@ -850,7 +861,8 @@ function setBingBanner(msg, warn) {
 }
 
 function updateBingUi() {
-  const installed = bingInstalled();
+  const st = bingPackageState();
+  const installed = st === "installed";
   if (!installed) state.bingReady = false;
   const pill = document.getElementById("bing_pill");
   const installBtn = document.getElementById("bing_install_btn");
@@ -861,40 +873,55 @@ function updateBingUi() {
   const readyBtn = document.getElementById("bing_ready_btn");
   const verifyBtn = document.getElementById("bing_verify_btn");
   if (pill) {
-    pill.textContent = !installed
-      ? "Bing: no instalada"
-      : (state.bingReady ? "Bing: lista" : "Bing: instalada");
+    if (st === "disabled") pill.textContent = "Bing: desactivada";
+    else if (!installed) pill.textContent = "Bing: no instalada";
+    else if (state.bingReady) pill.textContent = "Bing: sesión lista";
+    else pill.textContent = "Bing: sin sesión";
   }
-  if (installBtn) installBtn.hidden = installed;
-  if (loginBtn) loginBtn.hidden = !installed || !!state.bingReady;
-  if (readyBtn) readyBtn.hidden = !installed || !!state.bingReady;
-  if (verifyBtn) verifyBtn.hidden = !state.askingVerify;
-  if (setup) setup.hidden = installed && !!state.bingReady;
+  const showInstall = st === "missing";
+  const showLogin = installed && !state.bingReady;
+  const showReady = installed && !state.bingReady;
+  const showVerify = !!state.askingVerify;
+  if (installBtn) installBtn.hidden = !showInstall;
+  if (loginBtn) loginBtn.hidden = !showLogin;
+  if (readyBtn) readyBtn.hidden = !showReady;
+  if (verifyBtn) verifyBtn.hidden = !showVerify;
+  if (setup) setup.hidden = !(showInstall || showLogin || showReady || showVerify);
   [checkinBtn, newsBtn].forEach(function (el) {
     if (el) el.disabled = !installed || !state.bingReady || !!state.pendingVerify;
   });
-  if (!installed) {
-    setBingBanner("Instala Bing (Microsoft). Check-in y noticias solo cuentan en esa app.", true);
+  if (st === "disabled") {
+    setBingBanner("Bing está desactivada", true);
+  } else if (!installed) {
+    setBingBanner("Bing: no instalada", true);
+  } else if (state.waitingBingLogin) {
+    setBingBanner("Inicia sesión con la cuenta Microsoft. La sesión queda en esta app.", true);
+  } else if (state.probingSession || state.verifying) {
+    // The caller already set a checking banner.
+  } else if (state.askingVerify) {
+    // askPending sets its own banner.
   } else if (!state.bingReady) {
-    setBingBanner("Abre Bing e inicia sesión con la misma cuenta Microsoft. Luego Check-in / Noticias.", true);
-  } else {
+    setBingBanner("Bing: sin sesión", true);
+  } else if (!state.pendingVerify) {
     setBingBanner("");
   }
 }
 
 function ensureBingSetup(justPaired) {
   updateBingUi();
-  if (!bingInstalled()) {
+  const st = bingPackageState();
+  if (st === "disabled") {
+    log("Bing está desactivada.");
+    return;
+  }
+  if (st !== "installed") {
     if (justPaired) {
       log("Bing no está. Abre Play Store para instalarla.");
       installBingApp();
     }
     return;
   }
-  if (justPaired && !state.bingReady) {
-    log("Abre Bing e inicia sesión con la misma cuenta Microsoft.");
-    loginBingApp();
-  }
+  probeBingSession(justPaired ? "paired" : "status");
 }
 
 function installBingApp() {
@@ -921,17 +948,9 @@ function confirmBingReady() {
     updateBingUi();
     return;
   }
-  state.waitingBingLogin = false;
-  state.bingReady = true;
-  persist();
-  log("Bing marcada como lista. Check-in y noticias ya se pueden usar.");
-  setBingBanner("Bing lista. Pulsa Check-in o Noticias.");
-  updateBingUi();
-  if (state.pendingBingKind) {
-    const kind = state.pendingBingKind;
-    state.pendingBingKind = null;
-    runPhone(kind);
-  }
+  log("Comprobando la sesión de Rewards…");
+  setBingBanner("Comprobando la sesión de Rewards…", true);
+  probeBingSession("status");
 }
 
 function applyMarket(market) {
@@ -944,7 +963,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.28";
+  let ver = "4.3.29";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -978,22 +997,151 @@ function verifyPending() {
   askPending(kind);
 }
 
+function probeBingSession(purpose) {
+  purpose = purpose || "status";
+  if (bingPackageState() !== "installed") {
+    state.bingReady = false;
+    updateBingUi();
+    deliverProbe(false, purpose);
+    return;
+  }
+  if (state.probingSession) {
+    state.probeAgain = purpose;
+    return;
+  }
+  state.probingSession = true;
+  state.probePurpose = purpose;
+  let started = false;
+  try {
+    if (native() && native().probeBingSession) {
+      native().probeBingSession();
+      started = true;
+    }
+  } catch (e) {}
+  if (!started) {
+    state.probingSession = false;
+    state.probePurpose = "";
+    deliverProbe(false, purpose);
+  }
+}
+
+function deliverProbe(loggedIn, purpose) {
+  const wasReady = !!state.bingReady;
+  if (loggedIn) {
+    state.bingReady = true;
+    state.waitingBingLogin = false;
+  } else if (state.waitingBingLogin && purpose !== "paired") {
+    state.waitingBingLogin = false;
+    state.bingReady = false;
+  } else {
+    state.bingReady = false;
+  }
+  updateBingUi();
+  if (purpose === "success") {
+    const pending = state.pendingSuccess;
+    state.pendingSuccess = null;
+    const kind = pending ? pending.kind : (state.pendingVerify || "task");
+    const detail = pending ? pending.detail : "no se pudo";
+    if (!loggedIn || !pending || !reportedTaskOk(true, detail)) {
+      log("Sin sesión de Rewards. No se marca la tarea.");
+      state.bingReady = !!loggedIn;
+      state.pendingVerify = kind;
+      state.askingVerify = true;
+      state.verifying = false;
+      updateBingUi();
+      setBingBanner("Bing: sin sesión", true);
+      return;
+    }
+    state.pendingVerify = null;
+    state.askingVerify = false;
+    finishPending(true, detail);
+    reportEvent(kind, true, detail);
+    refreshAll();
+    return;
+  }
+  if (purpose === "thenVerify") {
+    const kind = state.probeKind || state.pendingVerify;
+    if (!loggedIn) {
+      log("Sin sesión de Rewards. No se marca la tarea.");
+      state.pendingVerify = kind;
+      state.askingVerify = true;
+      state.verifying = false;
+      updateBingUi();
+      setBingBanner("Bing: sin sesión", true);
+      return;
+    }
+    log("Sesión vista. Verificando " + (kind === "news" ? "noticias" : "check-in") + "…");
+    setBingBanner("Verificando en Rewards…", true);
+    state.verifying = true;
+    updateBingUi();
+    let started = false;
+    try {
+      if (native() && native().runTask) {
+        native().runTask(kind);
+        started = true;
+      }
+    } catch (e) {}
+    if (!started) {
+      state.verifying = false;
+      askPending(kind);
+    }
+    return;
+  }
+  if (loggedIn) {
+    if (!wasReady) log("Sesión de Rewards lista en esta app.");
+    if (state.pendingBingKind) {
+      const kind = state.pendingBingKind;
+      state.pendingBingKind = null;
+      runPhone(kind);
+    }
+    return;
+  }
+  if (purpose === "paired" && !state.waitingBingLogin) {
+    log("Inicia sesión en Rewards en esta app.");
+    loginBingApp();
+  }
+}
+
+window.onBingSession = function (loggedIn) {
+  const purpose = state.probingSession ? (state.probePurpose || "status") : "status";
+  const again = state.probeAgain || "";
+  state.probingSession = false;
+  state.probePurpose = "";
+  state.probeAgain = "";
+  deliverProbe(!!loggedIn, purpose);
+  if (again && again !== purpose) probeBingSession(again);
+};
+
 function loginBingApp() {
-  log("Abriendo Bing para iniciar sesión…");
+  if (bingPackageState() === "disabled") {
+    state.bingReady = false;
+    updateBingUi();
+    log("Bing está desactivada.");
+    return;
+  }
+  if (!bingInstalled()) {
+    log("Bing no está instalada.");
+    installBingApp();
+    return;
+  }
+  log("Abriendo el inicio de sesión de Rewards…");
+  state.probingSession = false;
+  state.probePurpose = "";
   state.waitingBingLogin = true;
+  updateBingUi();
   let ok = true;
   try {
-    if (native() && native().openBingApp) ok = native().openBingApp("login") !== false;
+    if (native() && native().openRewardsLogin) ok = native().openRewardsLogin() !== false;
+    else ok = false;
   } catch (e) {
     ok = false;
   }
   if (!ok) {
     state.waitingBingLogin = false;
-    log("No se pudo abrir Bing.");
-    setBingBanner("No se pudo abrir Bing.", true);
-    return;
+    log("No se pudo abrir el inicio de sesión.");
+    setBingBanner("No se pudo abrir el inicio de sesión.", true);
+    updateBingUi();
   }
-  setBingBanner("Inicia sesión en Bing con la misma cuenta Microsoft, luego vuelve.", true);
 }
 
 function runPhone(kind) {
@@ -1002,10 +1150,21 @@ function runPhone(kind) {
     return;
   }
   updateBingUi();
-  if (!bingInstalled()) {
+  const st = bingPackageState();
+  if (st === "disabled") {
+    log("Bing está desactivada.");
+    return;
+  }
+  if (st !== "installed") {
     state.pendingBingKind = kind;
     log("Bing no está instalada. Hay que instalarla primero.");
     installBingApp();
+    return;
+  }
+  if (!state.bingReady) {
+    state.pendingBingKind = kind;
+    log("Hace falta la sesión de Rewards en esta app.");
+    if (!state.waitingBingLogin) loginBingApp();
     return;
   }
   if (state.market) applyMarket(state.market);
@@ -1034,13 +1193,19 @@ window.onBingTask = function (ok, detail) {
     askPending(kind);
     return;
   }
-  state.pendingVerify = null;
-  state.askingVerify = false;
   const msg = text || (ok ? "Listo" : "no se pudo");
   const reported = reportedTaskOk(ok, msg);
-  finishPending(reported, msg);
-  reportEvent(kind, reported, msg);
-  refreshAll();
+  if (!reported) {
+    state.pendingVerify = null;
+    state.askingVerify = false;
+    finishPending(false, msg);
+    reportEvent(kind, false, msg);
+    refreshAll();
+    return;
+  }
+  state.pendingSuccess = { kind: kind, detail: msg };
+  setBingBanner("Comprobando la sesión de Rewards…", true);
+  probeBingSession("success");
 };
 
 function reportEvent(kind, ok, detail) {
@@ -1065,38 +1230,27 @@ function refreshAll() {
 window.onAppResume = function () {
   try { if (native() && native().keepDiscovering) native().keepDiscovering(); } catch (e) {}
   try { if (native() && native().discover) native().discover(); } catch (e) {}
-  const hadBing = bingInstalled();
+  const st = bingPackageState();
   updateBingUi();
-  if (state.waitingBingInstall && hadBing) {
+  if (state.waitingBingInstall && st === "installed") {
     state.waitingBingInstall = false;
     state.bingReady = false;
     log("Bing instalada. Ahora inicia sesión.");
     loginBingApp();
-  } else if (state.waitingBingLogin) {
-    state.waitingBingLogin = false;
-    if (hadBing) {
-      log("Volviste de Bing. Si ya iniciaste sesión, pulsa Bing lista.");
-      setBingBanner("Si ya iniciaste sesión en Bing, pulsa «Bing lista».", true);
-      updateBingUi();
-    } else {
-      log("Volviste, pero Bing no está instalada.");
-      setBingBanner("Instala Bing para continuar.", true);
-    }
-  } else if (state.pendingVerify && !state.verifying && !state.askingVerify) {
+  } else if (state.waitingBingInstall && st === "disabled") {
+    state.waitingBingInstall = false;
+    log("Bing está desactivada.");
+    updateBingUi();
+  } else if (state.waitingBingLogin || state.verifying || state.pendingSuccess) {
+    updateBingUi();
+  } else if (state.pendingVerify && !state.askingVerify) {
     const kind = state.pendingVerify;
-    log("Volviste de Bing. Verificando " + (kind === "news" ? "noticias" : "check-in") + "…");
-    setBingBanner("Verificando en Rewards…", true);
-    let started = false;
-    try {
-      if (native() && native().runTask) {
-        state.verifying = true;
-        native().runTask(kind);
-        started = true;
-      }
-    } catch (e) {
-      state.verifying = false;
-    }
-    if (!started) askPending(kind);
+    state.probeKind = kind;
+    log("Volviste de Bing. Comprobando la sesión de Rewards…");
+    setBingBanner("Comprobando la sesión de Rewards…", true);
+    probeBingSession("thenVerify");
+  } else if (st === "installed") {
+    probeBingSession("status");
   }
   if (state.token) refreshAll();
   checkPhoneUpdate();
@@ -1271,7 +1425,7 @@ async function checkPhoneUpdate(manual) {
   if (manual && button) { button.disabled = true; button.textContent = "Comprobando…"; }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.28") : "4.3.28";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.29") : "4.3.29";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;

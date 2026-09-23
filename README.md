@@ -2,7 +2,7 @@
 
 AutoRewarder Mobile acompaña a AutoRewarder PC cuando necesitas las funciones de teléfono de Microsoft Rewards. Se vincula por QR o código manual, recibe acciones del PC y devuelve el estado de la actividad.
 
-> Versión documentada: **4.3.28**<br>
+> Versión documentada: **4.3.29**<br>
 > Este repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)<br>
 > Compañero del fork [iGlitchOn/AutoRewarder-PC](https://github.com/iGlitchOn/AutoRewarder-PC)<br>
 > Proyecto original: [safarsin/AutoRewarder](https://github.com/safarsin/AutoRewarder)
@@ -176,7 +176,7 @@ Estas acciones dependen de que Microsoft las ofrezca para la cuenta y de que el 
 
 ### Bing no inicia sesión
 
-Abre Bing manualmente, inicia sesión en la cuenta correcta y vuelve a AutoRewarder Mobile.
+La sesión es la de Rewards dentro de esta app, no un botón guardado. Si el aviso dice que Bing está desactivada, actívala en Ajustes. Si no hay sesión, pulsa **Iniciar sesión en Bing** y entra con la cuenta Microsoft hasta que diga «Bing: sesión lista».
 
 ### Se desvinculó el teléfono
 

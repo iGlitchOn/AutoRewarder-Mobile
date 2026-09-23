@@ -495,6 +495,26 @@ public class AndroidJs {
         return BingLauncher.isInstalled(activity);
     }
 
+    /** "missing", "disabled", or "installed". Disabled is not installed. */
+    @JavascriptInterface
+    public String bingPackageState() {
+        int state = BingLauncher.packageState(activity);
+        if (state == BingLauncher.DISABLED) return "disabled";
+        if (state == BingLauncher.INSTALLED) return "installed";
+        return "missing";
+    }
+
+    @JavascriptInterface
+    public boolean openRewardsLogin() {
+        activity.openRewardsLogin();
+        return true;
+    }
+
+    @JavascriptInterface
+    public void probeBingSession() {
+        activity.probeBingSession();
+    }
+
     @JavascriptInterface
     public boolean installBing() {
         return BingLauncher.install(activity);
