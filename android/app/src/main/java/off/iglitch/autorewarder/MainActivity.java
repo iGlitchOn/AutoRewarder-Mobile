@@ -127,6 +127,10 @@ public class MainActivity extends Activity {
 
     void startBingTask(String kind) {
         runOnUiThread(() -> {
+            if (tasks != null && tasks.isRunning()) {
+                setBingStatus("Ya hay una tarea Bing en curso.");
+                return;
+            }
             bingWrap.setVisibility(View.VISIBLE);
             setBingStatus("Preparando Bing…");
             tasks.start(kind);

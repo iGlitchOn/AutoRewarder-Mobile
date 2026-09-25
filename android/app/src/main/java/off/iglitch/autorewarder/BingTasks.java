@@ -286,6 +286,7 @@ final class BingTasks {
     }
 
     void start(String kind) {
+        if (running) return;
         if (loginMode) {
             loginMode = false;
             lastLoginProbeUrl = "";
@@ -469,6 +470,8 @@ final class BingTasks {
         } catch (Exception e) {
             return false;
         }
+    boolean isRunning() {
+        return running;
     }
 
     private boolean isLogin(String url) {
@@ -631,6 +634,10 @@ final class BingTasks {
 
     private void openNextArticle() {
         if (!running) return;
+        if (newsHrefs.isEmpty()) {
+            finish(false, "No se encontraron noticias Bing para abrir");
+            return;
+        }
         if (newsIndex >= newsHrefs.size() || newsIndex >= 6) {
             verifyNews();
             return;
