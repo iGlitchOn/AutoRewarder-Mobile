@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.hardware.camera2.CameraAccessException;
@@ -24,8 +25,7 @@ import android.os.SystemClock;
 import android.util.Size;
 import android.view.Gravity;
 import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -46,7 +46,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
 
-public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
+public class QrScanActivity extends Activity implements TextureView.SurfaceTextureListener {
     public static final String EXTRA_TEXT = "qr_text";
     public static final String EXTRA_ERROR = "qr_error";
 
@@ -56,11 +56,13 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
     private ImageReader imageReader;
     private HandlerThread camThread;
     private Handler camHandler;
-    private SurfaceView preview;
+    private TextureView preview;
     private TextView hint;
     private volatile boolean done = false;
     private volatile boolean opening = false;
     private Size previewSize;
+    private Surface previewSurface;
+    private int sensorOrientation;
     private String cameraId;
     private byte[] yReuse;
     private long lastDecodeMs;
@@ -80,11 +82,10 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xFF0B0D12);
 
-        preview = new AspectSurfaceView(this);
-        preview.getHolder().addCallback(this);
+        preview = new TextureView(this);
+        preview.setSurfaceTextureListener(this);
         FrameLayout.LayoutParams previewLp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-        previewLp.gravity = Gravity.CENTER;
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
         root.addView(preview, previewLp);
 
         root.addView(new ViewfinderOverlay(this), new FrameLayout.LayoutParams(
@@ -123,17 +124,23 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
     }
 
     @Override
-    public void surfaceCreated(SurfaceHolder holder) {
+    public void onSurfaceTextureAvailable(android.graphics.SurfaceTexture surface, int width, int height) {
         openCamera();
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
+    public void onSurfaceTextureSizeChanged(android.graphics.SurfaceTexture surface, int width, int height) {
+        applyPreviewTransform(width, height);
+    }
 
     @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
+    public boolean onSurfaceTextureDestroyed(android.graphics.SurfaceTexture surface) {
         closeCamera();
+        return true;
     }
+
+    @Override
+    public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture surface) {}
 
     private void startThread() {
         camThread = new HandlerThread("qr-cam");
@@ -156,13 +163,12 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
                 return;
             }
             CameraCharacteristics chars = manager.getCameraCharacteristics(cameraId);
+            Integer orientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION);
+            sensorOrientation = orientation == null ? 0 : orientation;
             Size[] sizes = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                     .getOutputSizes(ImageFormat.YUV_420_888);
             previewSize = pickSize(sizes);
-            if (preview instanceof AspectSurfaceView) {
-                ((AspectSurfaceView) preview).setAspectRatio(
-                        previewSize.getWidth(), previewSize.getHeight());
-            }
+            applyPreviewTransform(preview.getWidth(), preview.getHeight());
             imageReader = ImageReader.newInstance(
                     previewSize.getWidth(), previewSize.getHeight(), ImageFormat.YUV_420_888, 2);
             imageReader.setOnImageAvailableListener(this::onImage, camHandler);
@@ -192,12 +198,12 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
 
     private void startSession() {
         if (camera == null || imageReader == null || preview == null) return;
-        Surface previewSurface = preview.getHolder().getSurface();
-        if (previewSurface == null || !previewSurface.isValid()) {
+        if (!preview.isAvailable()) {
             fail("La vista de cámara no está lista.");
             return;
         }
         try {
+            previewSurface = new Surface(preview.getSurfaceTexture());
             final CaptureRequest.Builder builder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             builder.addTarget(previewSurface);
             builder.addTarget(imageReader.getSurface());
@@ -359,40 +365,26 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
         return best;
     }
 
-    /** Keeps the preview proportional and center-crops it on portrait screens. */
-    private static class AspectSurfaceView extends SurfaceView {
-        private float aspect = 16f / 9f;
-
-        AspectSurfaceView(Context context) {
-            super(context);
-        }
-
-        void setAspectRatio(int width, int height) {
-            if (width > 0 && height > 0) {
-                aspect = (float) width / (float) height;
-                requestLayout();
-            }
-        }
-
-        @Override
-        protected void onMeasure(int widthSpec, int heightSpec) {
-            int maxWidth = MeasureSpec.getSize(widthSpec);
-            int maxHeight = MeasureSpec.getSize(heightSpec);
-            if (maxWidth <= 0 || maxHeight <= 0 || aspect <= 0f) {
-                super.onMeasure(widthSpec, heightSpec);
-                return;
-            }
-            int width;
-            int height;
-            if ((float) maxWidth / maxHeight < aspect) {
-                height = maxHeight;
-                width = Math.round(height * aspect);
-            } else {
-                width = maxWidth;
-                height = Math.round(width / aspect);
-            }
-            setMeasuredDimension(width, height);
-        }
+    /** Rotate and center-crop the camera buffer without stretching it. */
+    private void applyPreviewTransform(int viewWidth, int viewHeight) {
+        if (preview == null || previewSize == null || viewWidth <= 0 || viewHeight <= 0) return;
+        int displayRotation = getWindowManager().getDefaultDisplay().getRotation();
+        int displayDegrees = displayRotation == Surface.ROTATION_90 ? 90
+                : displayRotation == Surface.ROTATION_180 ? 180
+                : displayRotation == Surface.ROTATION_270 ? 270 : 0;
+        int totalRotation = (sensorOrientation - displayDegrees + 360) % 360;
+        boolean swapped = totalRotation == 90 || totalRotation == 270;
+        float bufferWidth = swapped ? previewSize.getHeight() : previewSize.getWidth();
+        float bufferHeight = swapped ? previewSize.getWidth() : previewSize.getHeight();
+        RectF view = new RectF(0, 0, viewWidth, viewHeight);
+        RectF buffer = new RectF(0, 0, bufferWidth, bufferHeight);
+        Matrix matrix = new Matrix();
+        matrix.setRectToRect(buffer, view, Matrix.ScaleToFit.CENTER);
+        float contain = Math.min(viewWidth / bufferWidth, viewHeight / bufferHeight);
+        float cover = Math.max(viewWidth / bufferWidth, viewHeight / bufferHeight);
+        matrix.postScale(cover / contain, cover / contain, view.centerX(), view.centerY());
+        if (totalRotation != 0) matrix.postRotate(totalRotation, view.centerX(), view.centerY());
+        preview.setTransform(matrix);
     }
 
     private void fail(String message) {
@@ -428,6 +420,12 @@ public class QrScanActivity extends Activity implements SurfaceHolder.Callback {
             if (imageReader != null) {
                 imageReader.close();
                 imageReader = null;
+            }
+        } catch (Exception ignored) {}
+        try {
+            if (previewSurface != null) {
+                previewSurface.release();
+                previewSurface = null;
             }
         } catch (Exception ignored) {}
         opening = false;
