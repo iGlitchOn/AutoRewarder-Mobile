@@ -141,6 +141,22 @@ const I18N = {
     "phone.points": "Points",
     "phone.total": "Total",
     "phone.today": "Today",
+    "label.pc": "PC",
+    "label.mobile": "Mobile",
+    "phone.brand": "Rewards Companion",
+    "phone.ready_state": "Ready",
+    "phone.setup_state": "PC setup needed",
+    "phone.by_microsoft": "by Microsoft",
+    "phone.by_phone": "by phone",
+    "phone.rewards": "Rewards",
+    "phone.progress.pc": "PC",
+    "phone.progress.mobile": "Mobile",
+    "phone.progress.daily": "Daily",
+    "phone.progress.visual": "Visual",
+    "phone.progress.checkin": "Check-in",
+    "phone.progress.news": "News",
+    "phone.progress.edge": "Edge",
+    "phone.progress.reset": "Reset",
     "phone.here": "On this phone",
     "phone.hint": "Check-in and news count in the Bing app, same Microsoft account.",
     "phone.checkin": "Check-in",
@@ -311,6 +327,22 @@ const I18N = {
     "phone.points": "Puntos",
     "phone.total": "Total",
     "phone.today": "Hoy",
+    "label.pc": "PC",
+    "label.mobile": "Móvil",
+    "phone.brand": "Rewards Companion",
+    "phone.ready_state": "Listo",
+    "phone.setup_state": "Falta el setup del PC",
+    "phone.by_microsoft": "de Microsoft",
+    "phone.by_phone": "del celular",
+    "phone.rewards": "Rewards",
+    "phone.progress.pc": "PC",
+    "phone.progress.mobile": "Móvil",
+    "phone.progress.daily": "Diarias",
+    "phone.progress.visual": "Visual",
+    "phone.progress.checkin": "Check-in",
+    "phone.progress.news": "Noticias",
+    "phone.progress.edge": "Edge",
+    "phone.progress.reset": "Reinicio",
     "phone.here": "En este celular",
     "phone.hint": "El check-in y las noticias cuentan en la app Bing, con la misma cuenta Microsoft.",
     "phone.checkin": "Check-in",
@@ -387,6 +419,7 @@ function set_ui_lang(lang) {
   if (tasksBtn) tasksBtn.textContent = t("run.tasks");
   const stopLabel = document.querySelector("#stop_btn .stop-label");
   if (stopLabel && !/Stopping|Parando/.test(stopLabel.textContent)) stopLabel.textContent = t("run.stop");
+  if (typeof refreshOverview === "function") refreshOverview();
 }
 
 function resolve_lang_from_settings(settings) {

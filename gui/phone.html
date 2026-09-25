@@ -148,7 +148,7 @@
           <img src="iglitchoff.png" alt="">
         </div>
         <div class="brand-text">
-          <h1>Rewards Companion</h1>
+          <h1 data-i18n="phone.brand">Rewards Companion</h1>
           <span class="brand-sub" id="app_version">Microsoft Rewards · Mobile companion · 4.3.46</span>
         </div>
       </div>
@@ -218,7 +218,7 @@
         <div class="stats-tiles">
           <div class="stat-tile">
             <span class="stat-value" id="stat_total">—</span>
-            <span class="stat-label">Total</span>
+            <span class="stat-label" data-i18n="phone.total">Total</span>
           </div>
           <div class="stat-tile">
             <span class="stat-value" id="stat_today">—</span>
@@ -229,7 +229,7 @@
 
       <section class="card rewards-card">
         <div class="card-header">
-          <div class="card-label">Rewards</div>
+          <div class="card-label" data-i18n="phone.rewards">Rewards</div>
           <span class="ghost-link" id="rewards_region">Colombia</span>
         </div>
         <div class="rewards-summary">
@@ -268,7 +268,7 @@
         <div class="card-label" data-i18n="phone.runpc">Run on the PC</div>
         <div class="count-group" style="margin-bottom:10px">
           <label class="count-field">PC <input type="number" id="count_pc" min="0" max="130" value="15" onchange="saveQueries()"></label>
-          <label class="count-field">Móvil <input type="number" id="count_mobile" min="0" max="99" value="15" onchange="saveQueries()"></label>
+          <label class="count-field"><span data-i18n="label.mobile">Móvil</span> <input type="number" id="count_mobile" min="0" max="99" value="15" onchange="saveQueries()"></label>
         </div>
         <div class="run-actions pc-actions">
           <button class="primary-btn-lg" id="pc_start_btn" type="button" onclick="runPc('start')" data-i18n="phone.start" disabled>Start on PC</button>

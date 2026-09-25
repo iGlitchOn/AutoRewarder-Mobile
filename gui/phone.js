@@ -265,10 +265,10 @@ function showMain() {
   document.getElementById("ms_name").textContent = state.account || "Microsoft account";
   document.getElementById("ms_avatar").textContent = initials(state.account || "MS");
   document.getElementById("ph_name").textContent = state.phone || deviceName();
-  const ready = state.ready ? "Listo" : "Falta setup en el PC";
+  const ready = state.ready ? t("phone.ready_state") : t("phone.setup_state");
   const mem = state.membership || "Microsoft Rewards";
-  document.getElementById("ms_meta").textContent = ready + " · " + mem + " · by Microsoft";
-  document.getElementById("ph_meta").textContent = ready + " · " + mem + " · by phone";
+  document.getElementById("ms_meta").textContent = ready + " · " + mem + " · " + t("phone.by_microsoft");
+  document.getElementById("ph_meta").textContent = ready + " · " + mem + " · " + t("phone.by_phone");
   updateBingUi();
 }
 
@@ -643,14 +643,14 @@ async function refreshOverview() {
       if (obj != null && obj !== "") return String(obj);
       return fallback || "—";
     };
-    set("progress_pc", "PC: " + frac(progress.pc));
-    set("progress_mobile", "Mobile: " + frac(progress.mobile));
-    set("progress_daily", "Daily: " + frac(progress.daily));
-    set("progress_visual", "Visual: " + frac(progress.visual));
-    set("progress_checkin", "Check-in: " + frac(progress.checkin));
-    set("progress_news", "News: " + frac(progress.news));
-    set("progress_edge", "Edge: " + frac(progress.edge));
-    set("progress_reset", progress.reset || "—");
+    set("progress_pc", t("phone.progress.pc") + ": " + frac(progress.pc));
+    set("progress_mobile", t("phone.progress.mobile") + ": " + frac(progress.mobile));
+    set("progress_daily", t("phone.progress.daily") + ": " + frac(progress.daily));
+    set("progress_visual", t("phone.progress.visual") + ": " + frac(progress.visual));
+    set("progress_checkin", t("phone.progress.checkin") + ": " + frac(progress.checkin));
+    set("progress_news", t("phone.progress.news") + ": " + frac(progress.news));
+    set("progress_edge", t("phone.progress.edge") + ": " + frac(progress.edge));
+    set("progress_reset", t("phone.progress.reset") + ": " + (progress.reset || "—"));
     const st = document.getElementById("status_text");
     const dot = document.getElementById("dot");
     if (st) st.textContent = data.running ? "El PC está corriendo" : "Vinculado al PC · listo";
@@ -976,7 +976,7 @@ function showAppVersion() {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
   } catch (e) {}
-  el.textContent = "Microsoft Rewards · Mobile companion · " + ver;
+  el.textContent = "Microsoft Rewards · " + t("phone.brand") + " · " + ver;
 }
 
 function askPending(kind) {
