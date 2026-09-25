@@ -26,6 +26,12 @@ const state = {
   bingReady: false,
 };
 
+// Keep slow mobile networks from stacking identical requests. A request that
+// is still waiting on a timeout must never block the next UI refresh.
+let overviewInFlight = false;
+let jobsInFlight = false;
+let heartbeatInFlight = false;
+
 function log(msg) {
   const area = document.getElementById("log_area");
   if (!area) return;
@@ -220,7 +226,11 @@ async function request(method, path, body) {
   const urls = bases();
   if (!urls.length) throw new Error("not linked");
   let last = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  // GETs are safe to retry across the alternate LAN/public URL once, but a
+  // second full retry cycle makes mobile data feel frozen when the LAN URL is
+  // unreachable. POSTs keep the old retry behavior for pairing/actions.
+  const maxAttempts = method === "GET" ? 1 : 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     for (let i = 0; i < urls.length; i++) {
       const url = urls[i] + path;
       try {
@@ -612,15 +622,8 @@ async function reconnect(hostOverride) {
 }
 
 async function refreshOverview() {
-  try {
-    const disc = await request("GET", "/discover");
-    if (disc) {
-      const next = disc.public_url || disc.lan_url || disc.url;
-      if (next) state.base = next;
-      if (disc.lan_url) state.lan = disc.lan_url;
-      persist();
-    }
-  } catch (e) {}
+  if (overviewInFlight) return;
+  overviewInFlight = true;
   try {
     const data = await request("GET", "/overview");
     if (!data || !data.ok) {
@@ -676,6 +679,8 @@ async function refreshOverview() {
     }
   } catch (e) {
     applyPcButtons(state.pcRunning);
+  } finally {
+    overviewInFlight = false;
   }
 }
 
@@ -699,12 +704,15 @@ async function saveQueries() {
 }
 
 async function pollJobs() {
-  if (!state.token) return;
+  if (!state.token || jobsInFlight) return;
+  jobsInFlight = true;
   try {
     const data = await request("GET", "/jobs");
     const jobs = (data && data.jobs) || [];
     for (let i = 0; i < jobs.length; i++) handleJob(jobs[i]);
-  } catch (e) {}
+  } catch (e) {} finally {
+    jobsInFlight = false;
+  }
 }
 
 function handleJob(job) {
@@ -963,7 +971,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.30";
+  let ver = "4.3.46";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -1253,11 +1261,11 @@ window.onAppResume = function () {
     probeBingSession("status");
   }
   if (state.token) refreshAll();
-  checkPhoneUpdate();
 };
 
 async function heartbeat() {
-  if (!state.token) return;
+  if (!state.token || heartbeatInFlight) return;
+  heartbeatInFlight = true;
   try { if (native() && native().keepDiscovering) native().keepDiscovering(); } catch (e) {}
   try {
     await request("GET", "/me");
@@ -1268,7 +1276,15 @@ async function heartbeat() {
       dropLink("El PC te desvinculó. Escanea el QR para volver a unir.");
       return;
     }
-    await reconnect(state.lan || state.base);
+    // Do not launch another serial reconnect attempt on every heartbeat. The
+    // next overview poll or the user can retry once the network returns.
+    const hint = document.getElementById("offline_hint");
+    if (hint) {
+      hint.hidden = false;
+      hint.textContent = "Sin conexión al PC. Reintentando sin bloquear la aplicación…";
+    }
+  } finally {
+    heartbeatInFlight = false;
   }
 }
 
@@ -1310,15 +1326,11 @@ function setUpdateBanner(msg, warn) {
   else el.textContent = msg;
   el.classList.toggle("warn", !!warn);
   const download = document.getElementById("update_download_btn");
-  const canDownload = _hasPhoneDownload(state.pendingPhoneUpdate);
+  const canDownload = !!(state.pendingPhoneUpdate && state.pendingPhoneUpdate.download_url);
   if (download) {
     download.hidden = !canDownload;
     download.disabled = !canDownload;
   }
-}
-
-function _hasPhoneDownload(update) {
-  return !!(update && typeof update.download_url === "string" && update.download_url.trim());
 }
 
 function cancelPhoneUpdate() {
@@ -1333,7 +1345,7 @@ function cancelPhoneUpdate() {
 
 function downloadPhoneUpdate() {
   const update = state.pendingPhoneUpdate;
-  if (!_hasPhoneDownload(update) || state.phoneUpdateDownloading) return;
+  if (!update || !update.download_url || state.phoneUpdateDownloading) return;
   state.phoneUpdateDownloading = true;
   setUpdateBanner(t("updates.phone_down"));
   const download = document.getElementById("update_download_btn");
@@ -1431,7 +1443,7 @@ async function checkPhoneUpdate(manual) {
   if (manual && button) { button.disabled = true; button.textContent = t("updates.checking"); }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.30") : "4.3.30";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.46") : "4.3.46";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;
@@ -1486,7 +1498,6 @@ async function checkPhoneUpdate(manual) {
 window.onNativeReady = function () {
   try { if (native() && native().discover) native().discover(); } catch (e) {}
   restore();
-  checkPhoneUpdate();
 };
 
 window.onUpdateReady = function () {
@@ -1503,12 +1514,8 @@ window.onUpdateFailed = function (msg) {
 try { if (native() && native().discover) native().discover(); } catch (e) {}
 showAppVersion();
 restore();
-checkPhoneUpdate();
-setTimeout(function () {
-  restore();
-  checkPhoneUpdate();
-}, 400);
-setInterval(pollJobs, 3000);
-setInterval(refreshOverview, 5000);
-setInterval(heartbeat, 5000);
-setInterval(checkPhoneUpdate, 20000);
+setInterval(pollJobs, 5000);
+setInterval(refreshOverview, 10000);
+setInterval(heartbeat, 30000);
+// Updates are secondary: never make app startup depend on three GitHub calls.
+setTimeout(function () { if (state.token) checkPhoneUpdate(false); }, 30000);

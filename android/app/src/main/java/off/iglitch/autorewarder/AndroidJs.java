@@ -61,7 +61,7 @@ public class AndroidJs {
                 pulseMe();
             } catch (Exception ignored) {}
             try {
-                Thread.sleep(30_000);
+                Thread.sleep(60_000);
             } catch (InterruptedException e) {
                 return;
             }
@@ -564,8 +564,14 @@ public class AndroidJs {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(15000);
+            // A stale LAN address is common when the phone moves to mobile
+            // data. Fail it quickly so the saved public URL can be tried
+            // instead of freezing every WebView request for 23 seconds.
+            URL parsedUrl = new URL(url);
+            boolean privateHttp = "http".equalsIgnoreCase(parsedUrl.getProtocol())
+                    && cleartextHostAllowed(parsedUrl.getHost());
+            conn.setConnectTimeout(privateHttp ? 900 : 5000);
+            conn.setReadTimeout(privateHttp ? 1800 : 8000);
             conn.setInstanceFollowRedirects("https".equalsIgnoreCase(new URL(url).getProtocol()));
             conn.setRequestMethod(method == null ? "GET" : method.toUpperCase());
             boolean github = url != null && url.contains("api.github.com");
