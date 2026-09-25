@@ -873,28 +873,24 @@ function updateBingUi() {
   const installed = st === "installed";
   if (!installed) state.bingReady = false;
   const pill = document.getElementById("bing_pill");
-  const installBtn = document.getElementById("bing_install_btn");
   const loginBtn = document.getElementById("bing_login_btn");
   const setup = document.getElementById("bing_setup_actions");
   const checkinBtn = document.getElementById("phone_checkin_btn");
   const newsBtn = document.getElementById("phone_news_btn");
   const readyBtn = document.getElementById("bing_ready_btn");
-  const verifyBtn = document.getElementById("bing_verify_btn");
   if (pill) {
     if (st === "disabled") pill.textContent = t("bing.disabled");
     else if (!installed) pill.textContent = t("bing.missing");
     else if (state.bingReady) pill.textContent = t("bing.ready");
     else pill.textContent = t("bing.nosession");
   }
-  const showInstall = st === "missing";
-  const showLogin = installed && !state.bingReady;
+  // The login action also handles a missing Bing installation by opening
+  // Play Store, so the user only needs two controls here.
+  const showLogin = st !== "disabled" && !state.bingReady;
   const showReady = installed && !state.bingReady;
-  const showVerify = !!state.askingVerify;
-  if (installBtn) installBtn.hidden = !showInstall;
   if (loginBtn) loginBtn.hidden = !showLogin;
   if (readyBtn) readyBtn.hidden = !showReady;
-  if (verifyBtn) verifyBtn.hidden = !showVerify;
-  if (setup) setup.hidden = !(showInstall || showLogin || showReady || showVerify);
+  if (setup) setup.hidden = !(showLogin || showReady);
   [checkinBtn, newsBtn].forEach(function (el) {
     if (el) el.disabled = !installed || !state.bingReady || !!state.pendingVerify;
   });
@@ -951,6 +947,10 @@ function installBingApp() {
 }
 
 function confirmBingReady() {
+  if (state.pendingVerify) {
+    verifyPending();
+    return;
+  }
   if (!bingInstalled()) {
     state.bingReady = false;
     updateBingUi();
@@ -983,7 +983,7 @@ function askPending(kind) {
   state.askingVerify = true;
   state.pendingVerify = kind || state.pendingVerify;
   const label = state.pendingVerify === "news" ? "las noticias" : "el check-in";
-  setBingBanner("No pude leer el contador. Si ya completaste " + label + " en Bing, pulsa Verificar.", true);
+  setBingBanner("No pude leer el contador. Si ya completaste " + label + " en Bing, pulsa Comprobar sesión.", true);
   log("No se marca done hasta leer getuserinfo.");
   updateBingUi();
 }

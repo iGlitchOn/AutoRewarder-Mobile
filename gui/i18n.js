@@ -317,7 +317,7 @@ const I18N = {
     "phone.news": "Noticias",
     "phone.install": "Instalar Bing",
     "phone.login": "Iniciar sesión en Bing",
-    "phone.ready": "Revisar sesión",
+    "phone.ready": "Comprobar sesión",
     "phone.verify": "Verificar",
     "phone.runpc": "Correr en el PC",
     "phone.start": "Iniciar en PC",
