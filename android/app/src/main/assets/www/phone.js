@@ -1310,11 +1310,15 @@ function setUpdateBanner(msg, warn) {
   else el.textContent = msg;
   el.classList.toggle("warn", !!warn);
   const download = document.getElementById("update_download_btn");
-  const canDownload = !!(state.pendingPhoneUpdate && state.pendingPhoneUpdate.download_url);
+  const canDownload = _hasPhoneDownload(state.pendingPhoneUpdate);
   if (download) {
     download.hidden = !canDownload;
     download.disabled = !canDownload;
   }
+}
+
+function _hasPhoneDownload(update) {
+  return !!(update && typeof update.download_url === "string" && update.download_url.trim());
 }
 
 function cancelPhoneUpdate() {
@@ -1329,7 +1333,7 @@ function cancelPhoneUpdate() {
 
 function downloadPhoneUpdate() {
   const update = state.pendingPhoneUpdate;
-  if (!update || !update.download_url || state.phoneUpdateDownloading) return;
+  if (!_hasPhoneDownload(update) || state.phoneUpdateDownloading) return;
   state.phoneUpdateDownloading = true;
   setUpdateBanner(t("updates.phone_down"));
   const download = document.getElementById("update_download_btn");
