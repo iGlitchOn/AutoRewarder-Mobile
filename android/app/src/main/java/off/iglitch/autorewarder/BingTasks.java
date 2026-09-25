@@ -99,6 +99,8 @@ final class BingTasks {
                     + Uri.encode(REWARDS_HOME);
     private static final int TASK_DEADLINE_MS = 90000;
     private static final int PROBE_TIMEOUT_MS = 20000;
+    private static final int LOGIN_COOKIE_SETTLE_MS = 700;
+    private static final int LOGIN_REWARDS_LOAD_WAIT_MS = 1200;
 
     /** rewards / userInfo / userStatus id. HTML and an empty id are not a session. */
     private static final String SESSION_JS =
@@ -251,12 +253,29 @@ final class BingTasks {
         bing.loadUrl(LOGIN_URL);
     }
 
-    /** Close the in-app login sheet and probe the WebView cookie jar. */
+    /** Close the login sheet, let WebView persist cookies, then verify from Rewards. */
     void finishLogin() {
+        if (!loginMode) return;
         loginMode = false;
         lastLoginProbeUrl = "";
         activity.hideBingPanel();
-        probeSession(activity::deliverSession);
+        try { CookieManager.getInstance().flush(); } catch (Exception ignored) {}
+
+        // The login redirect can finish just before Android has persisted the
+        // account cookies. Probe only after that settles, and do it from a
+        // Rewards page so the same-origin fetch can see the final session.
+        handler.postDelayed(() -> {
+            if (running) return;
+            String current = bing.getUrl();
+            if (canFetch(current)) {
+                probeSession(activity::deliverSession);
+                return;
+            }
+            bing.loadUrl(REWARDS_HOME);
+            handler.postDelayed(() -> {
+                if (!running) probeSession(activity::deliverSession);
+            }, LOGIN_REWARDS_LOAD_WAIT_MS);
+        }, LOGIN_COOKIE_SETTLE_MS);
     }
 
     void probeForUi() {
