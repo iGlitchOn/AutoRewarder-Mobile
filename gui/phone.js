@@ -1515,7 +1515,9 @@ try { if (native() && native().discover) native().discover(); } catch (e) {}
 showAppVersion();
 restore();
 setInterval(pollJobs, 5000);
-setInterval(refreshOverview, 10000);
+// Overview is cached on the PC; polling every 10s made slow Wi-Fi/mobile data
+// look frozen and stacked requests while the previous response was pending.
+setInterval(refreshOverview, 30000);
 setInterval(heartbeat, 30000);
 // Updates are secondary: never make app startup depend on three GitHub calls.
 setTimeout(function () { if (state.token) checkPhoneUpdate(false); }, 30000);
