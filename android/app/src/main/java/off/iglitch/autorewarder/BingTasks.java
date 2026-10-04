@@ -489,6 +489,8 @@ final class BingTasks {
         } catch (Exception e) {
             return false;
         }
+    }
+
     boolean isRunning() {
         return running;
     }
