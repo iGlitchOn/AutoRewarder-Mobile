@@ -378,6 +378,18 @@ const I18N = {
   },
 };
 
+// Runtime status strings must use the selected language too. They are added
+// here because they include values received from the PC at runtime.
+const RUNTIME_COPY = {
+  en: { "phone.pc_running": "PC is running", "phone.linked_ready": "Linked to PC · ready", "phone.searches_saved": "Searches: PC {pc} / mobile {mobile}", "phone.pc_job": "PC task: {kind}" },
+  es: { "phone.pc_running": "El PC está ejecutándose", "phone.linked_ready": "Vinculado al PC · listo", "phone.searches_saved": "Búsquedas: PC {pc} / móvil {mobile}", "phone.pc_job": "Tarea del PC: {kind}" },
+  pt: { "phone.pc_running": "O PC está executando", "phone.linked_ready": "Vinculado ao PC · pronto", "phone.searches_saved": "Pesquisas: PC {pc} / celular {mobile}", "phone.pc_job": "Tarefa do PC: {kind}" },
+  zh: { "phone.pc_running": "电脑正在运行", "phone.linked_ready": "已关联到电脑 · 就绪", "phone.searches_saved": "搜索：电脑 {pc} / 手机 {mobile}", "phone.pc_job": "电脑任务：{kind}" },
+};
+Object.keys(RUNTIME_COPY).forEach(function (lang) {
+  Object.assign(I18N[lang], RUNTIME_COPY[lang]);
+});
+
 let _uiLang = "en";
 
 function t(key) {

@@ -653,7 +653,7 @@ async function refreshOverview() {
     set("progress_reset", t("phone.progress.reset") + ": " + (progress.reset || "—"));
     const st = document.getElementById("status_text");
     const dot = document.getElementById("dot");
-    if (st) st.textContent = data.running ? "El PC está corriendo" : "Vinculado al PC · listo";
+    if (st) st.textContent = data.running ? t("phone.pc_running") : t("phone.linked_ready");
     if (dot) dot.style.background = data.running ? "var(--warning)" : "var(--success)";
     const hint = document.getElementById("offline_hint");
     if (hint) hint.hidden = true;
@@ -697,7 +697,7 @@ async function saveQueries() {
     if (data && data.mobile != null) mobile = data.mobile;
     if (pcEl) pcEl.value = pc;
     if (mobEl) mobEl.value = mobile;
-    log("Búsquedas: PC " + pc + " / móvil " + mobile);
+    log(t("phone.searches_saved").replace("{pc}", pc).replace("{mobile}", mobile));
   } catch (e) {
     log("No se guardaron las búsquedas en el PC.");
   }
@@ -730,11 +730,11 @@ function handleJob(job) {
   }
   state.pendingJob = job;
   if (job.market) applyMarket(job.market);
-  log("PC job: " + kind);
+  log(t("phone.pc_job").replace("{kind}", kind));
   const banner = document.getElementById("job_banner");
   if (banner) {
     banner.hidden = false;
-    banner.textContent = "PC job: " + kind;
+    banner.textContent = t("phone.pc_job").replace("{kind}", kind);
   }
   runPhone(kind);
 }
@@ -827,7 +827,7 @@ async function stopPc() {
     if (data && (data.ok || data.stopped)) {
       log("PC stop enviado.");
       const st = document.getElementById("status_text");
-      if (st) st.textContent = "Stopped";
+      if (st) st.textContent = t("phone.stop");
     } else {
       log("Stop falló: " + JSON.stringify(data));
     }
