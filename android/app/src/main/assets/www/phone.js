@@ -114,9 +114,23 @@ function bases() {
     u = String(u).replace(/\/$/, "");
     if (out.indexOf(u) < 0) out.push(u);
   };
-  add(state.lan);
   add(state.base);
+  add(state.lan);
   return out;
+}
+
+function isLanUrl(url) {
+  try {
+    const parsed = new URL(String(url));
+    if (parsed.protocol !== "http:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" ||
+      /^10\./.test(host) || /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+      /^169\.254\./.test(host) || host.endsWith(".local");
+  } catch (e) {
+    return false;
+  }
 }
 
 function httpRaw(method, url, body, token) {
@@ -235,7 +249,9 @@ async function request(method, path, body) {
       const url = urls[i] + path;
       try {
         let text = httpRaw(method, url, body, state.token);
-        if (text == null) text = await fetchRaw(method, url, body, state.token);
+        if (text == null) text = await fetchRaw(
+          method, url, body, state.token, isLanUrl(url) ? 1500 : 12000
+        );
         const data = JSON.parse(text || "{}");
         if (data && data.error === "auth") throw new Error("auth");
         if (!protocolOk(data)) throw new Error("protocol");
@@ -971,7 +987,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.46";
+  let ver = "4.3.47";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -1443,7 +1459,7 @@ async function checkPhoneUpdate(manual) {
   if (manual && button) { button.disabled = true; button.textContent = t("updates.checking"); }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.46") : "4.3.46";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.47") : "4.3.47";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;
