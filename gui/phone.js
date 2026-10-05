@@ -987,7 +987,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.51";
+  let ver = "4.3.52";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -1454,7 +1454,8 @@ async function _githubPhoneRelease(repo) {
 }
 
 async function checkPhoneUpdate(manual) {
-  if (state.phoneUpdateCheckRunning || state.phoneUpdateDownloading) return;
+  if (state.phoneUpdateDownloading) return;
+  if (state.phoneUpdateCheckRunning && !manual) return;
   state.phoneUpdateCheckRunning = true;
   const watchdog = setTimeout(function () { state.phoneUpdateCheckRunning = false; }, 25000);
   const button = document.getElementById("updates_btn");
@@ -1473,18 +1474,14 @@ async function checkPhoneUpdate(manual) {
       if (byCode != null) return byCode;
       return !!(update.tag && _phoneReleaseNewer(update.tag, mine));
     };
-    const pcUpdate = await _pcPhoneUpdate();
-    const original = await _githubPhoneRelease("safarsin/AutoRewarder");
+    const original = null;
     const custom = await _githubPhoneRelease("iGlitchOn/AutoRewarder-Mobile");
     const customFailed = !!(custom && custom.error);
     if (original && original.tag && _phoneReleaseNewer(original.tag, "4.3") && !state.originalUpdateNotified) {
       state.originalUpdateNotified = true;
       log("Hay una nueva versión del repositorio original (" + original.tag + "). Notifica al desarrollador; no se instalará.");
     }
-    if (pcUpdate && newerThanMine(pcUpdate)) {
-      state.pendingPhoneUpdate = pcUpdate;
-      setUpdateBanner(tf("updates.phone_ask", { tag: pcUpdate.tag }));
-    } else if (custom && custom.tag && _phoneReleaseNewer(custom.tag, mine)) {
+    if (custom && custom.tag && newerThanMine(custom)) {
       state.pendingPhoneUpdate = custom;
       if (custom.download_url) {
         setUpdateBanner(tf("updates.phone_ask", { tag: custom.tag }));
