@@ -70,6 +70,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
         hints.put(DecodeHintType.POSSIBLE_FORMATS, Collections.singletonList(BarcodeFormat.QR_CODE));
@@ -365,15 +366,11 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         return best;
     }
 
-    /** Rotate and center-crop the camera buffer without stretching it. */
+    /** Keep the camera preview upright in portrait and center-crop without stretching. */
     private void applyPreviewTransform(int viewWidth, int viewHeight) {
         if (preview == null || previewSize == null || viewWidth <= 0 || viewHeight <= 0) return;
-        int displayRotation = getWindowManager().getDefaultDisplay().getRotation();
-        int displayDegrees = displayRotation == Surface.ROTATION_90 ? 90
-                : displayRotation == Surface.ROTATION_180 ? 180
-                : displayRotation == Surface.ROTATION_270 ? 270 : 0;
-        int totalRotation = (sensorOrientation - displayDegrees + 360) % 360;
-        boolean swapped = totalRotation == 90 || totalRotation == 270;
+        int rotation = sensorOrientation == 270 ? 270 : 90;
+        boolean swapped = rotation == 90 || rotation == 270;
         float bufferWidth = swapped ? previewSize.getHeight() : previewSize.getWidth();
         float bufferHeight = swapped ? previewSize.getWidth() : previewSize.getHeight();
         RectF view = new RectF(0, 0, viewWidth, viewHeight);
@@ -383,7 +380,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         float contain = Math.min(viewWidth / bufferWidth, viewHeight / bufferHeight);
         float cover = Math.max(viewWidth / bufferWidth, viewHeight / bufferHeight);
         matrix.postScale(cover / contain, cover / contain, view.centerX(), view.centerY());
-        if (totalRotation != 0) matrix.postRotate(totalRotation, view.centerX(), view.centerY());
+        matrix.postRotate(rotation, view.centerX(), view.centerY());
         preview.setTransform(matrix);
     }
 
