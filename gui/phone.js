@@ -987,7 +987,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.50";
+  let ver = "4.3.51";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);

@@ -370,9 +370,10 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
     private void applyPreviewTransform(int viewWidth, int viewHeight) {
         if (preview == null || previewSize == null || viewWidth <= 0 || viewHeight <= 0) return;
         int rotation = sensorOrientation == 270 ? 270 : 90;
-        boolean swapped = rotation == 90 || rotation == 270;
-        float bufferWidth = swapped ? previewSize.getHeight() : previewSize.getWidth();
-        float bufferHeight = swapped ? previewSize.getWidth() : previewSize.getHeight();
+        // The buffer is still in the sensor's native orientation here. Rotate it
+        // exactly once below; do not swap its dimensions before rotating it.
+        float bufferWidth = previewSize.getWidth();
+        float bufferHeight = previewSize.getHeight();
         RectF view = new RectF(0, 0, viewWidth, viewHeight);
         RectF buffer = new RectF(0, 0, bufferWidth, bufferHeight);
         Matrix matrix = new Matrix();
