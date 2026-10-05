@@ -10,6 +10,7 @@ import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -99,14 +100,20 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
                 + "3. Deja visible el QR en la pantalla.\n"
                 + "4. Centra el QR dentro del cuadro y espera a que se vincule.");
         hint.setTextColor(0xFFFFFFFF);
-        hint.setTextSize(14);
-        hint.setLineSpacing(2, 1.0f);
-        hint.setPadding(28, 24, 28, 28);
+        hint.setTextSize(13);
+        hint.setLineSpacing(1, 1.05f);
+        hint.setPadding(20, 16, 20, 16);
         hint.setGravity(Gravity.CENTER);
+        GradientDrawable hintBackground = new GradientDrawable();
+        hintBackground.setColor(0xD9101824);
+        hintBackground.setCornerRadius(22);
+        hint.setBackground(hintBackground);
         FrameLayout.LayoutParams hintLp = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
         hintLp.gravity = Gravity.BOTTOM;
-        hintLp.bottomMargin = 36;
+        hintLp.leftMargin = 18;
+        hintLp.rightMargin = 18;
+        hintLp.bottomMargin = 22;
         root.addView(hint, hintLp);
 
         TextView cancel = new TextView(this);
@@ -366,22 +373,19 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
         return best;
     }
 
-    /** Keep the camera preview upright in portrait and center-crop without stretching. */
+    /** Rotate the sensor buffer once and fit the complete camera image in the view. */
     private void applyPreviewTransform(int viewWidth, int viewHeight) {
         if (preview == null || previewSize == null || viewWidth <= 0 || viewHeight <= 0) return;
         int rotation = sensorOrientation == 270 ? 270 : 90;
-        // The buffer is still in the sensor's native orientation here. Rotate it
-        // exactly once below; do not swap its dimensions before rotating it.
-        float bufferWidth = previewSize.getWidth();
-        float bufferHeight = previewSize.getHeight();
+        RectF buffer = new RectF(0, 0, previewSize.getWidth(), previewSize.getHeight());
+        Matrix rotate = new Matrix();
+        rotate.setRotate(rotation, buffer.centerX(), buffer.centerY());
+        RectF rotated = new RectF(buffer);
+        rotate.mapRect(rotated);
         RectF view = new RectF(0, 0, viewWidth, viewHeight);
-        RectF buffer = new RectF(0, 0, bufferWidth, bufferHeight);
         Matrix matrix = new Matrix();
-        matrix.setRectToRect(buffer, view, Matrix.ScaleToFit.CENTER);
-        float contain = Math.min(viewWidth / bufferWidth, viewHeight / bufferHeight);
-        float cover = Math.max(viewWidth / bufferWidth, viewHeight / bufferHeight);
-        matrix.postScale(cover / contain, cover / contain, view.centerX(), view.centerY());
-        matrix.postRotate(rotation, view.centerX(), view.centerY());
+        matrix.setRectToRect(rotated, view, Matrix.ScaleToFit.CENTER);
+        matrix.postConcat(rotate);
         preview.setTransform(matrix);
     }
 
@@ -459,7 +463,7 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             setWillNotDraw(false);
             dim.setColor(0x990B0D12);
             line.setColor(0xFF5B8EFF);
-            line.setStrokeWidth(8);
+            line.setStrokeWidth(5);
             line.setStyle(Paint.Style.STROKE);
             line.setAntiAlias(true);
         }
@@ -476,19 +480,6 @@ public class QrScanActivity extends Activity implements TextureView.SurfaceTextu
             canvas.drawRect(left + box, top, w, top + box, dim);
             canvas.drawRect(0, top + box, w, h, dim);
             canvas.drawRoundRect(new RectF(left, top, left + box, top + box), 22, 22, line);
-            int corner = box / 8;
-            Paint tick = new Paint(line);
-            tick.setStrokeWidth(10);
-            tick.setStrokeCap(Paint.Cap.ROUND);
-            float l = left + 10, t = top + 10, r = left + box - 10, b = top + box - 10;
-            canvas.drawLine(l, t, l + corner, t, tick);
-            canvas.drawLine(l, t, l, t + corner, tick);
-            canvas.drawLine(r, t, r - corner, t, tick);
-            canvas.drawLine(r, t, r, t + corner, tick);
-            canvas.drawLine(l, b, l + corner, b, tick);
-            canvas.drawLine(l, b, l, b - corner, tick);
-            canvas.drawLine(r, b, r - corner, b, tick);
-            canvas.drawLine(r, b, r, b - corner, tick);
         }
     }
 }
