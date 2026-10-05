@@ -987,7 +987,7 @@ function applyMarket(market) {
 function showAppVersion() {
   const el = document.getElementById("app_version");
   if (!el) return;
-  let ver = "4.3.49";
+  let ver = "4.3.50";
   try {
     const n = native();
     if (n && n.appVersionName) ver = String(n.appVersionName() || ver);
@@ -1426,8 +1426,10 @@ async function _pcPhoneUpdate() {
 async function _githubPhoneRelease(repo) {
   try {
     const url = "https://api.github.com/repos/" + repo + "/releases/latest";
-    let text = httpRaw("GET", url, null, "");
-    if (text == null) text = await fetchRaw("GET", url, null, "");
+    // GitHub must be checked asynchronously. The native bridge is synchronous
+    // and can freeze the WebView while mobile data is negotiating the request.
+    let text = await fetchRaw("GET", url, null, "", 12000);
+    if (text == null) text = httpRaw("GET", url, null, "");
     const data = JSON.parse(text || "{}");
     if (data && data.ok === false && !data.tag_name) {
       return { error: data.error || "github", repo: repo };
@@ -1456,10 +1458,14 @@ async function checkPhoneUpdate(manual) {
   state.phoneUpdateCheckRunning = true;
   const watchdog = setTimeout(function () { state.phoneUpdateCheckRunning = false; }, 25000);
   const button = document.getElementById("updates_btn");
-  if (manual && button) { button.disabled = true; button.textContent = t("updates.checking"); }
+  if (manual && button) {
+    button.disabled = true;
+    button.textContent = t("updates.checking");
+    setUpdateBanner(t("updates.checking"));
+  }
   const n = native();
   try {
-    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.48") : "4.3.48";
+    const mine = n && n.appVersionName ? String(n.appVersionName() || "4.3.49") : "4.3.49";
     const mineCode = n && n.appVersionCode ? Number(n.appVersionCode() || 0) : 0;
     const newerThanMine = function (update) {
       if (!update) return false;
