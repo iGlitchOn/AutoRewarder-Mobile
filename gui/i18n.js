@@ -376,7 +376,130 @@ const I18N = {
     "updates.upstream": "El original tiene {tag}. No se instala.",
     "updates.phone_ask": "Nueva versión {tag}. Se instala sola.",
   },
+  pt: {
+    "phone.updates": "Verificar atualizações",
+    "phone.download": "Baixar",
+    "phone.cancel": "Cancelar",
+    "phone.pair": "Vincular ao PC",
+    "phone.pair_hint": "No PC: Conta e depois Vincular um celular. Digite o código ou escaneie o QR.",
+    "phone.pair_btn": "Vincular",
+    "phone.looking": "Procurando o PC…",
+    "phone.account": "Conta",
+    "phone.points": "Pontos",
+    "phone.total": "Total",
+    "phone.today": "Hoje",
+    "label.pc": "PC",
+    "label.mobile": "Celular",
+    "phone.brand": "Rewards Companion",
+    "phone.ready_state": "Pronto",
+    "phone.setup_state": "Configuração pendente no PC",
+    "phone.by_microsoft": "da Microsoft",
+    "phone.by_phone": "do celular",
+    "phone.rewards": "Rewards",
+    "phone.progress.pc": "PC",
+    "phone.progress.mobile": "Celular",
+    "phone.progress.daily": "Diárias",
+    "phone.progress.visual": "Visual",
+    "phone.progress.checkin": "Check-in",
+    "phone.progress.news": "Notícias",
+    "phone.progress.edge": "Edge",
+    "phone.progress.reset": "Reinício",
+    "phone.here": "Neste celular",
+    "phone.hint": "O check-in, resgate e notícias contam no app Bing com a mesma conta Microsoft.",
+    "phone.run_all": "Automatizar tudo (Check-in + Resgatar + Notícias)",
+    "phone.claim": "Resgatar pontos",
+    "phone.checkin": "Check-in",
+    "phone.news": "Notícias",
+    "phone.install": "Instalar Bing",
+    "phone.login": "Entrar no Bing",
+    "phone.ready": "Verificar sessão",
+    "phone.verify": "Verificar",
+    "phone.runpc": "Executar no PC",
+    "phone.start": "Iniciar no PC",
+    "phone.tasks": "Só tarefas",
+    "phone.edge": "Edge 30 min",
+    "phone.stop": "Parar",
+    "phone.activity": "Atividade",
+    "phone.unlink": "Desvincular este celular",
+    "phone.linked": "Vinculado ao PC",
+    "phone.qr": "Escanear QR",
+    "bing.missing": "Bing: não instalado",
+    "bing.disabled": "Bing: desativado",
+    "bing.ready": "Bing: sessão pronta",
+    "bing.nosession": "Bing: sem sessão",
+    "bing.off": "O Bing está desativado.",
+    "bing.install_banner": "Instale o Bing (Microsoft). Check-in e notícias só contam nesse app.",
+    "bing.session_banner": "Entre com a mesma conta Microsoft. Depois toque em Check-in, Resgatar ou Notícias.",
+    "updates.phone_none": "Nenhuma atualização disponível.",
+    "updates.phone_down": "Baixando atualização…",
+    "updates.upstream": "O original tem {tag}. Não será instalado.",
+    "updates.phone_ask": "Nova versão {tag}. Instala automaticamente.",
+  },
+  zh: {
+    "phone.updates": "检查更新",
+    "phone.download": "下载",
+    "phone.cancel": "取消",
+    "phone.pair": "关联到电脑",
+    "phone.pair_hint": "在电脑上：账户 -> 关联手机。输入代码或扫描二维码。",
+    "phone.pair_btn": "关联",
+    "phone.looking": "正在查找电脑…",
+    "phone.account": "账户",
+    "phone.points": "积分",
+    "phone.total": "总计",
+    "phone.today": "今日",
+    "label.pc": "电脑",
+    "label.mobile": "手机",
+    "phone.brand": "Rewards 手机助手",
+    "phone.ready_state": "就绪",
+    "phone.setup_state": "电脑待设置",
+    "phone.by_microsoft": "由 Microsoft 提供",
+    "phone.by_phone": "在此手机上",
+    "phone.rewards": "Rewards 概览",
+    "phone.progress.pc": "电脑",
+    "phone.progress.mobile": "手机",
+    "phone.progress.daily": "每日",
+    "phone.progress.visual": "视觉",
+    "phone.progress.checkin": "签到",
+    "phone.progress.news": "新闻",
+    "phone.progress.edge": "Edge",
+    "phone.progress.reset": "重置",
+    "phone.here": "在此手机上",
+    "phone.hint": "签到、领取积分和阅读新闻需使用同一 Microsoft 账户在 Bing 中完成。",
+    "phone.run_all": "自动完成全部（签到 + 领取 + 新闻）",
+    "phone.claim": "领取积分",
+    "phone.checkin": "签到",
+    "phone.news": "阅读新闻",
+    "phone.install": "安装 Bing",
+    "phone.login": "登录 Bing",
+    "phone.ready": "检查会话",
+    "phone.verify": "验证",
+    "phone.runpc": "在电脑上运行",
+    "phone.start": "在电脑上启动",
+    "phone.tasks": "仅任务",
+    "phone.edge": "Edge 30 分钟",
+    "phone.stop": "停止",
+    "phone.activity": "活动",
+    "phone.unlink": "取消关联此手机",
+    "phone.linked": "已关联到电脑",
+    "phone.qr": "扫描二维码",
+    "bing.missing": "Bing：未安装",
+    "bing.disabled": "Bing：已禁用",
+    "bing.ready": "Bing：会话已就绪",
+    "bing.nosession": "Bing：未登录",
+    "bing.off": "Bing 已禁用。",
+    "bing.install_banner": "请安装 Microsoft Bing，签到与阅读新闻需在该应用中完成。",
+    "bing.session_banner": "请使用相同的 Microsoft 账户登录，然后点击签到、领取或新闻。",
+    "updates.phone_none": "已是最新版本。",
+    "updates.phone_down": "正在下载更新…",
+    "updates.upstream": "原始仓库有 {tag}，不会自动安装。",
+    "updates.phone_ask": "发现新版本 {tag}，将自动安装。",
+  },
 };
+
+I18N.en["phone.run_all"] = "Auto-run all (Check-in + Claim + News)";
+I18N.en["phone.claim"] = "Claim points";
+I18N.es["phone.run_all"] = "Automatizar todo (Check-in + Reclamar + Noticias)";
+I18N.es["phone.claim"] = "Reclamar puntos";
 
 // Runtime status strings must use the selected language too. They are added
 // here because they include values received from the PC at runtime.
@@ -387,10 +510,17 @@ const RUNTIME_COPY = {
   zh: { "phone.pc_running": "电脑正在运行", "phone.linked_ready": "已关联到电脑 · 就绪", "phone.searches_saved": "搜索：电脑 {pc} / 手机 {mobile}", "phone.pc_job": "电脑任务：{kind}" },
 };
 Object.keys(RUNTIME_COPY).forEach(function (lang) {
+  if (!I18N[lang]) I18N[lang] = {};
   Object.assign(I18N[lang], RUNTIME_COPY[lang]);
 });
 
-let _uiLang = "en";
+let _uiLang = (function () {
+  try {
+    const saved = localStorage.getItem("ar_ui_lang");
+    if (saved && I18N[saved]) return saved;
+  } catch (e) {}
+  return "es";
+})();
 
 function t(key) {
   const pack = I18N[_uiLang] || I18N.en;
@@ -406,9 +536,25 @@ function tf(key, vars) {
   return text;
 }
 
+function translate_runtime_text(value) {
+  let text = String(value == null ? "" : value);
+  const map = {
+    "Gold Member": { en: "Gold Member", es: "Miembro Oro", pt: "Membro Ouro", zh: "黄金会员" },
+    "Silver Member": { en: "Silver Member", es: "Miembro Plata", pt: "Membro Prata", zh: "白银会员" },
+    "Bronze Member": { en: "Bronze Member", es: "Miembro Bronce", pt: "Membro Bronze", zh: "青铜会员" },
+  };
+  Object.keys(map).forEach(function (k) {
+    text = text.replace(new RegExp("\\b" + k + "\\b", "gi"), map[k][_uiLang] || map[k].en);
+  });
+  return text;
+}
+
 function set_ui_lang(lang) {
   _uiLang = ["en", "es", "pt", "zh"].indexOf(lang) >= 0 ? lang : "en";
+  try { localStorage.setItem("ar_ui_lang", _uiLang); } catch (e) {}
   document.documentElement.lang = _uiLang;
+  const langSel = document.getElementById("phoneLangSelect");
+  if (langSel && langSel.value !== _uiLang) langSel.value = _uiLang;
   document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
     el.title = t(el.getAttribute("data-i18n-title"));
   });
@@ -435,11 +581,12 @@ function set_ui_lang(lang) {
   if (tasksBtn) tasksBtn.textContent = t("run.tasks");
   const stopLabel = document.querySelector("#stop_btn .stop-label");
   if (stopLabel && !/Stopping|Parando/.test(stopLabel.textContent)) stopLabel.textContent = t("run.stop");
-  if (typeof refreshOverview === "function") refreshOverview();
+  if (typeof showAppVersion === "function") showAppVersion();
+  if (typeof updateBingUi === "function") updateBingUi();
 }
 
 function resolve_lang_from_settings(settings) {
-  const pref = (settings && settings.ui_language) || "auto";
+  const pref = (settings && (settings.ui_locale || settings.ui_language)) || "auto";
   if (["en", "es", "pt", "zh"].indexOf(pref) >= 0) return pref;
   const blob = String(
     (settings && (settings.windows_locale || settings.detected_locale)) ||
