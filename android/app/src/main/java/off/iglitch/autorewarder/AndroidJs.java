@@ -557,6 +557,24 @@ public class AndroidJs {
     }
 
     @JavascriptInterface
+    public void httpAsync(String reqId, String method, String url, String body, String token) {
+        final String safeId = reqId == null ? "" : reqId;
+        io.execute(() -> {
+            String resp = http(method, url, body, token);
+            final String jsCall = "window.__onHttpAsync && __onHttpAsync("
+                    + JSONObject.quote(safeId) + ","
+                    + JSONObject.quote(resp == null ? "" : resp) + ")";
+            activity.runOnUiThread(() -> {
+                try {
+                    if (webView != null) {
+                        webView.evaluateJavascript(jsCall, null);
+                    }
+                } catch (Exception ignored) {}
+            });
+        });
+    }
+
+    @JavascriptInterface
     public String http(String method, String url, String body, String token) {
         if (!urlAllowed(url)) {
             return "{\"ok\":false,\"error\":\"cleartext_blocked\"}";

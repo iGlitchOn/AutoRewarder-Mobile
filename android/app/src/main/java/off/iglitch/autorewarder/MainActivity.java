@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -46,6 +47,12 @@ public class MainActivity extends Activity {
         Button close = findViewById(R.id.bing_close);
         close.setOnClickListener(v -> closeBing());
 
+        ui.setBackgroundColor(Color.parseColor("#101827"));
+        ui.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        ui.setVerticalScrollBarEnabled(false);
+        ui.setHorizontalScrollBarEnabled(false);
+        bing.setBackgroundColor(Color.parseColor("#101827"));
+
         @SuppressLint("SetJavaScriptEnabled")
         WebSettings settings = ui.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -54,6 +61,10 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+        settings.setTextZoom(100);
 
         js = new AndroidJs(this, ui);
         ui.addJavascriptInterface(js, "Android");

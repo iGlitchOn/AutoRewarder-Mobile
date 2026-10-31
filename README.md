@@ -2,7 +2,7 @@
 
 AutoRewarder Mobile acompaña a AutoRewarder PC cuando necesitas las funciones de teléfono de Microsoft Rewards. Se vincula por QR o código manual, recibe acciones del PC y devuelve el estado de la actividad.
 
-> Versión documentada: **4.3.30**<br>
+> Versión documentada: **4.4.0**<br>
 > Este repositorio: [iGlitchOn/AutoRewarder-Mobile](https://github.com/iGlitchOn/AutoRewarder-Mobile)<br>
 > Compañero del fork [iGlitchOn/AutoRewarder-PC](https://github.com/iGlitchOn/AutoRewarder-PC)<br>
 > Proyecto original: [safarsin/AutoRewarder](https://github.com/safarsin/AutoRewarder)
@@ -114,19 +114,19 @@ La cámara conserva la proporción de la imagen para que el código no se vea es
 
 ### Actividad
 
+- **Automate all (Check-in + Claim + News)** ejecuta secuencialmente el check-in y la lectura de noticias en segundo plano.
 - **Check-in** solicita el check-in si está disponible.
 - **News** solicita la actividad de noticias si Rewards la muestra.
-- **Install Bing / Login Bing** abre el flujo correspondiente.
-- **Start searches** inicia las búsquedas móviles configuradas.
-- **Stop** detiene la ejecución activa sin desvincular el teléfono.
+- **Sign in to Bing / Check session** abre o verifica la sesión de Microsoft Rewards integrada en la app.
 
 ### Control del PC
 
-- **Start PC** solicita una ejecución en el PC.
-- **Tasks only** solicita únicamente las tareas diarias.
-- **Open Edge** abre Edge en el PC si el puente está conectado.
-- **Check updates** consulta las releases de ambos repositorios.
-- **Download** descarga una actualización propia.
+- **Start on PC** solicita una ejecución completa en el PC con las cantidades de PC y móvil configuradas.
+- **Tasks only** solicita únicamente las tareas diarias en el PC.
+- **Edge 30 min** solicita completar los minutos pendientes de navegación en Edge.
+- **Stop** detiene la ejecución activa en el PC sin desvincular el teléfono.
+- **Check updates** consulta las releases de móvil (en GitHub y en el PC vinculado).
+- **Download** descarga una actualización propia verificada por firma y versión.
 - **Cancel** cierra el diálogo sin cambiar la instalación.
 
 Un botón puede quedar deshabilitado si no hay teléfono vinculado, el PC está apagado, la cuenta no está disponible o la tarea ya terminó. En ese caso la interfaz evita enviar una acción que no tiene dónde ejecutarse.
